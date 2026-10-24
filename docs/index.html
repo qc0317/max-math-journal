@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer"><meta name="robots" content="noindex,nofollow">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob: data:; connect-src 'self'; frame-src blob:; object-src blob:; base-uri 'none'; form-action 'none'">
+  <title>拾级 · 数学学习档案</title><link rel="stylesheet" href="style.css">
+</head>
+<body>
+<section id="gate" class="gate">
+  <div class="gate-art"><div class="brand">拾级 <span>MATH JOURNAL</span></div><div class="orbit">∑</div><h1>每一次订正，<br>都是向上一级。</h1><p>让试卷成为线索，让复习有迹可循。</p><div class="small">数学学习档案 / 家庭专属</div></div>
+  <form id="unlock" class="gate-form"><span class="eyebrow">WELCOME BACK</span><h2>打开学习档案</h2><p>输入家庭口令，查看试卷、学习记录与复习安排。</p><label for="password">家庭口令</label><input id="password" type="password" autocomplete="current-password" required><button type="submit" id="unlock-button">解锁档案 →</button><p id="gate-message" role="status"></p><small>资料在当前浏览器解密。关闭或锁定页面后需重新输入口令。</small></form>
+</section>
+<div id="portal" hidden>
+ <aside><div class="brand">拾级 <span>数学学习档案</span></div><div class="student">M<div><strong>学习者</strong><small>六年级 · 第一学期</small></div></div><nav aria-label="主导航"><button data-view="overview" class="active">◫　学习总览</button><button data-view="papers">▤　试卷档案</button><button data-view="review">↻　错题与复习</button><button data-view="topics">∑　知识点线索</button><button data-view="manage">⚙　资料与同步</button></nav><div class="aside-bottom">循序渐进，每次一点。<button id="lock" class="ghost">锁定档案 ↗</button></div></aside>
+ <main><header><span id="breadcrumb">学习总览</span><div><span id="save-state">已载入 GitHub 数据</span><button id="save" class="secondary">下载加密更新</button></div></header><div id="content"></div><footer>分析须回到原题验证 · 不同试卷的难度与范围可能不同</footer></main>
+</div>
+<dialog id="detail"><div class="dialog-top"><h2 id="detail-title"></h2><button id="close-detail" class="ghost">关闭 ×</button></div><div id="detail-body"></div></dialog>
+<script src="app.js"></script>
+</body></html>
