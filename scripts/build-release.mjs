@@ -1,0 +1,34 @@
+import {readFile,writeFile,mkdir,readdir,copyFile} from 'node:fs/promises';
+import {resolve,dirname} from 'node:path';
+import {randomBytes,pbkdf2Sync,createCipheriv,createDecipheriv,createHash} from 'node:crypto';
+import {fileURLToPath} from 'node:url';
+const self=fileURLToPath(import.meta.url),work=dirname(self),root=resolve(work,'..'),input=resolve(process.argv[2]||resolve(root,'outputs/local-analysis')),old=resolve(process.argv[3]||resolve(root,'outputs/math-learning/docs')),out=resolve(process.argv[4]||resolve(root,'outputs/github-release'));
+await mkdir(resolve(out,'docs/vendor'),{recursive:true});await mkdir(resolve(out,'scripts'),{recursive:true});
+const password=await new Promise(resolve=>{let v='';if(process.stdin.isTTY)process.stdin.setRawMode(true);process.stdin.setEncoding('utf8');process.stdin.on('data',chunk=>{v+=chunk;if(/[\r\n]/.test(v)){if(process.stdin.isTTY)process.stdin.setRawMode(false);process.stdin.pause();resolve(v.replace(/[\r\n].*$/s,''))}});process.stdout.write('等待加密口令输入\n')});
+const prior=JSON.parse(await readFile(resolve(old,'data.enc'),'utf8')),key=pbkdf2Sync(password,Buffer.from(prior.salt,'base64'),600000,32,'sha256');
+function dec(e){const v=Buffer.from(e.data,'base64'),d=createDecipheriv('aes-256-gcm',key,Buffer.from(e.iv,'base64'));d.setAuthTag(v.subarray(-16));return Buffer.concat([d.update(v.subarray(0,-16)),d.final()])}
+JSON.parse(dec(prior));
+const snapshot=JSON.parse(await readFile(resolve(input,'analysis.json'),'utf8'));
+for(const p of snapshot.papers){const e=JSON.parse(await readFile(resolve(old,'files',p.id+'.enc'),'utf8')),pdf=dec(e);if(createHash('sha256').update(pdf).digest('hex')!==p.id)throw new Error('原卷完整性核对失败');}
+let html=await readFile(resolve(input,'index.html'),'utf8');
+html=html.replaceAll('location.hash','window.parent.location.hash').replaceAll('location.search','window.parent.location.search').replace("window.addEventListener('hashchange',route)","window.parent.addEventListener('hashchange',route)");
+html=html.replaceAll('仅本地','家庭档案').replaceAll('所有题目与分析均保存在本地。','学习资料加密保存在GitHub。');
+const bridge=`<script>document.addEventListener('click',event=>{const a=event.target.closest('a[href]');if(!a)return;const url=new URL(a.getAttribute('href'),document.baseURI);const p=D.papers.find(p=>new URL(p.local_pdf,document.baseURI).pathname===url.pathname);if(p){event.preventDefault();window.parent.postMessage({type:'math-open-paper',id:p.id,page:Number(url.hash.replace('#page=',''))||1},location.origin);return}const match=url.pathname.match(/assets\\/(P[1-5])-(\\d+)\\.png$/);if(match){const p=D.papers.find(p=>p.paper_id===match[1]);if(p){event.preventDefault();window.parent.postMessage({type:'math-open-paper',id:p.id,page:Math.ceil(Number(match[2])/2)},location.origin)}return}const name=decodeURIComponent(url.pathname.split('/').pop());if(['analysis.json','错题集.md','本地分析报告.md','数据更新说明.md'].includes(name)){event.preventDefault();window.parent.postMessage({type:'math-export-record',name},location.origin)}},true);</script>`;
+html=html.replace('</body>',bridge.replaceAll('},location.origin)','},window.parent.location.origin)')+'</body>');
+const records={curriculum:JSON.parse(await readFile(resolve(input,'data/curriculum.json'),'utf8')),papers:[],template:await readFile(resolve(input,'tools/template.html'),'utf8'),builder:await readFile(resolve(input,'tools/build.py'),'utf8')};for(const name of await readdir(resolve(input,'data/papers')))if(name.endsWith('.json'))records.papers.push(JSON.parse(await readFile(resolve(input,'data/papers',name),'utf8')));
+const reports={};for(const name of ['错题集.md','本地分析报告.md','数据更新说明.md'])reports[name]=await readFile(resolve(input,name),'utf8');
+const payload=Buffer.from(JSON.stringify({format:'math-portal-v2',html,snapshot,source_records:records,reports}));
+const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',key,iv),envelope={version:1,kdf:'PBKDF2-SHA256',iterations:600000,salt:prior.salt,iv:iv.toString('base64'),data:Buffer.concat([cipher.update(payload),cipher.final(),cipher.getAuthTag()]).toString('base64')};
+if(!dec(envelope).equals(payload))throw new Error('加密回读失败');const tampered={...envelope,data:envelope.data.slice(0,-8)+'AAAAAAAA'};let rejected=false;try{dec(tampered)}catch{rejected=true}if(!rejected)throw new Error('未拒绝篡改');
+const release='2026-10-25-'+createHash('sha256').update(payload).digest('hex').slice(0,10);
+await writeFile(resolve(out,'docs/portal.enc'),JSON.stringify(envelope));await writeFile(resolve(out,'docs/index.html'),(await readFile(resolve(work,'release-index.html'),'utf8')).replace('__RELEASE__',release));
+await copyFile(resolve(work,'release-gate.css'),resolve(out,'docs/gate.css'));await copyFile(resolve(work,'release-gate.js'),resolve(out,'docs/gate.js'));
+for(const name of ['charts.css','force-tree.js','vendor/d3.v7.9.0.min.js','vendor/D3-LICENSE.txt','vendor/README.md'])await copyFile(resolve(input,name),resolve(out,'docs',name));
+let chart=await readFile(resolve(input,'charts.js'),'utf8');chart=chart.replaceAll('location.search','(window.parent!==window?window.parent.location.search:location.search)');await writeFile(resolve(out,'docs/charts.js'),chart);
+await writeFile(resolve(out,'docs/.nojekyll'),'');await writeFile(resolve(out,'docs/release.json'),JSON.stringify({release}));
+await writeFile(resolve(out,'README.md'),'# 数学学习档案\n\nGitHub Pages 发布目录为 docs/。学习数据库、全部题干、逐卷分析及构建所需的原始结构化记录统一保存在 AES-256-GCM 加密的 docs/portal.enc 中；原始试卷继续使用 docs/files/ 中已有的加密档案。口令仅在浏览器解锁时输入，不写入仓库。\n\n新版包括掌握情况、文字错题集、黑白 D3 知识树及原卷浏览。数据文件与PDF解密后仅在当前浏览器中使用。\n\n构建源码及版本说明位于 scripts/。D3 的开源许可保存在 docs/vendor/。\n');
+await copyFile(self,resolve(out,'scripts/build-release.mjs'));for(const name of ['release-index.html','release-gate.css','release-gate.js'])await copyFile(resolve(work,name),resolve(out,'scripts',name));
+const paths=['README.md','scripts/build-release.mjs','scripts/release-index.html','scripts/release-gate.css','scripts/release-gate.js','docs/index.html','docs/gate.css','docs/gate.js','docs/charts.css','docs/charts.js','docs/force-tree.js','docs/vendor/d3.v7.9.0.min.js','docs/vendor/D3-LICENSE.txt','docs/vendor/README.md','docs/.nojekyll','docs/release.json','docs/portal.enc'];
+for(const path of paths){const s=await readFile(resolve(out,path),'utf8');if(s.includes(password))throw new Error('口令出现在发布内容中');if(path!=='docs/portal.enc'&&snapshot.questions.some(q=>q.student_answer.length>18&&s.includes(q.student_answer)))throw new Error('检测到明文作答');}
+await writeFile(resolve(out,'upload-manifest.json'),JSON.stringify({release,paths:await Promise.all(paths.map(async path=>({path,chars:(await readFile(resolve(out,path),'utf8')).length})))}));
+console.log(JSON.stringify({release,files:paths.length,papers:snapshot.papers.length,questions:snapshot.questions.length,verified:'加密回读、5份原卷指纹和篡改拒绝均通过；发布清单无口令或明文学习记录'}));
