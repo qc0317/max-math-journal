@@ -1,18 +1,20 @@
 import {readFile,writeFile,mkdir,readdir,copyFile} from 'node:fs/promises';
 import {resolve,dirname} from 'node:path';
 import {randomBytes,pbkdf2Sync,createCipheriv,createDecipheriv,createHash} from 'node:crypto';
+import {gzipSync,gunzipSync} from 'node:zlib';
 import {fileURLToPath} from 'node:url';
 const self=fileURLToPath(import.meta.url),work=dirname(self),root=resolve(work,'..'),input=resolve(process.argv[2]||resolve(root,'outputs/local-analysis')),old=resolve(process.argv[3]||resolve(root,'outputs/math-learning/docs')),out=resolve(process.argv[4]||resolve(root,'outputs/github-release'));
 await mkdir(resolve(out,'docs/vendor'),{recursive:true});await mkdir(resolve(out,'docs/files'),{recursive:true});await mkdir(resolve(out,'scripts'),{recursive:true});
 const password=await new Promise(resolve=>{let v='';if(process.stdin.isTTY)process.stdin.setRawMode(true);process.stdin.setEncoding('utf8');process.stdin.on('data',chunk=>{v+=chunk;if(/[\r\n]/.test(v)){if(process.stdin.isTTY)process.stdin.setRawMode(false);process.stdin.pause();resolve(v.replace(/[\r\n].*$/s,''))}});process.stdout.write('等待加密口令输入\n')});
 const prior=JSON.parse(await readFile(resolve(old,'data.enc'),'utf8')),key=pbkdf2Sync(password,Buffer.from(prior.salt,'base64'),600000,32,'sha256');
-function dec(e){const v=Buffer.from(e.data,'base64'),d=createDecipheriv('aes-256-gcm',key,Buffer.from(e.iv,'base64'));d.setAuthTag(v.subarray(-16));return Buffer.concat([d.update(v.subarray(0,-16)),d.final()])}
+function dec(e){const v=Buffer.from(e.data,'base64'),d=createDecipheriv('aes-256-gcm',key,Buffer.from(e.iv,'base64'));d.setAuthTag(v.subarray(-16));const plain=Buffer.concat([d.update(v.subarray(0,-16)),d.final()]);return e.compression==='gzip'?gunzipSync(plain):plain}
 JSON.parse(dec(prior));
 const snapshot=JSON.parse(await readFile(resolve(input,'analysis.json'),'utf8'));
 const p6=snapshot.papers.find(p=>p.id==='exam-p6-happy-friday-06');
 if(p6){const bytes=await readFile(resolve(input,'sources/快乐星期五06-横向查看.pdf')),asset_id=createHash('sha256').update(bytes).digest('hex');p6.asset_id=asset_id;p6.source_sha256=asset_id;p6.display_file='快乐星期五06-横向查看.pdf';const iv=randomBytes(12),c=createCipheriv('aes-256-gcm',key,iv),env={version:1,kdf:'PBKDF2-SHA256',iterations:600000,salt:prior.salt,iv:iv.toString('base64'),data:Buffer.concat([c.update(bytes),c.final(),c.getAuthTag()]).toString('base64')};const sealed=Buffer.from(env.data,'base64');const check=dec({data:env.data,iv:env.iv});if(!check.subarray(0,5).equals(Buffer.from('%PDF-'))||createHash('sha256').update(check).digest('hex')!==asset_id)throw Error('P6 asset verification failed');await writeFile(resolve(out,'docs/files',asset_id+'.enc'),JSON.stringify(env));await writeFile(resolve(out,'docs/files',p6.id+'.enc'),JSON.stringify(env));}
 for(const p of snapshot.papers){if(p.id==='exam-p6-happy-friday-06')continue;const e=JSON.parse(await readFile(resolve(old,'files',p.id+'.enc'),'utf8')),pdf=dec(e);if(createHash('sha256').update(pdf).digest('hex')!==p.id)throw new Error('原卷完整性核对失败');}
 let html=await readFile(resolve(input,'index.html'),'utf8');
+html=html.replace("setAttribute('aria-label','版本 1.1.0')","setAttribute('aria-label','版本 1.2.0')").replace("siteVersion.textContent='v1.1.0'","siteVersion.textContent='v1.2.0'");
 html=html.replaceAll('location.hash','window.parent.location.hash').replaceAll('location.search','window.parent.location.search').replace("window.addEventListener('hashchange',route)","window.parent.addEventListener('hashchange',route)");
 html=html.replaceAll('new URL(location)','new URL(window.parent.location.href)').replaceAll('history.replaceState','window.parent.history.replaceState');
 html=html.replace('本地试用 · 草稿与作答保存在此浏览器，尚未自动同步 GitHub。请导出备份。','本次发布已包含备份练习。本机新修改加密保存在当前浏览器；后续请导出备份同步到 GitHub。');
@@ -26,10 +28,12 @@ const researchDir=resolve(input,'..','temp','2026-10-26'),researchPaths=[],resea
 await mkdir(resolve(out,'docs/research'),{recursive:true});
 for(const source of research.sources.filter(s=>s.filename&&s.status.startsWith('downloaded'))){const plain=await readFile(resolve(researchDir,source.filename)),sha=createHash('sha256').update(plain).digest('hex');if(sha!==source.sha256)throw Error('素材指纹不一致');const iv=randomBytes(12),c=createCipheriv('aes-256-gcm',key,iv),e={version:1,kdf:'PBKDF2-SHA256',iterations:600000,salt:prior.salt,iv:iv.toString('base64'),data:Buffer.concat([c.update(plain),c.final(),c.getAuthTag()]).toString('base64')};if(!dec(e).equals(plain))throw Error('素材加密回读失败');const path='docs/research/'+sha+'.enc';await writeFile(resolve(out,path),JSON.stringify(e));researchPaths.push(path);research.files.push({filename:source.filename,path,sha256:sha,bytes:plain.length,source_url:source.url})}
 const payload=Buffer.from(JSON.stringify({format:'math-portal-v2',html,snapshot,source_records:records,reports,research_archive:research}));
-const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',key,iv),envelope={version:1,kdf:'PBKDF2-SHA256',iterations:600000,salt:prior.salt,iv:iv.toString('base64'),data:Buffer.concat([cipher.update(payload),cipher.final(),cipher.getAuthTag()]).toString('base64')};
+const compressed=gzipSync(payload,{level:9});
+const iv=randomBytes(12),cipher=createCipheriv('aes-256-gcm',key,iv),envelope={version:2,compression:'gzip',original_bytes:payload.length,compressed_bytes:compressed.length,kdf:'PBKDF2-SHA256',iterations:600000,salt:prior.salt,iv:iv.toString('base64'),data:Buffer.concat([cipher.update(compressed),cipher.final(),cipher.getAuthTag()]).toString('base64')};
 if(!dec(envelope).equals(payload))throw new Error('加密回读失败');const tampered={...envelope,data:envelope.data.slice(0,-8)+'AAAAAAAA'};let rejected=false;try{dec(tampered)}catch{rejected=true}if(!rejected)throw new Error('未拒绝篡改');
 const release='2026-10-26-'+createHash('sha256').update(payload).digest('hex').slice(0,10);
-await writeFile(resolve(out,'docs/portal.enc'),JSON.stringify(envelope));await writeFile(resolve(out,'docs/index.html'),(await readFile(resolve(work,'release-index.html'),'utf8')).replaceAll('__RELEASE__',release));
+const sourceCommit=process.env.LEVELUP_SOURCE_COMMIT||'local-candidate';
+await writeFile(resolve(out,'docs/portal.enc'),JSON.stringify(envelope));await writeFile(resolve(out,'docs/index.html'),(await readFile(resolve(work,'release-index.html'),'utf8')).replaceAll('__RELEASE__',release).replaceAll('__SOURCE_COMMIT__',sourceCommit));
 await copyFile(resolve(work,'release-gate.css'),resolve(out,'docs/gate.css'));await copyFile(resolve(work,'release-gate.js'),resolve(out,'docs/gate.js'));
 for(const name of ['charts.css','force-tree.js','bank-training.js','training-print.js','vendor/d3.v7.9.0.min.js','vendor/D3-LICENSE.txt','vendor/README.md'])await copyFile(resolve(input,name),resolve(out,'docs',name));
 let chart=await readFile(resolve(input,'charts.js'),'utf8');chart=chart.replaceAll('location.search','(window.parent!==window?window.parent.location.search:location.search)');await writeFile(resolve(out,'docs/charts.js'),chart);
