@@ -1,7 +1,7 @@
 const $=s=>document.querySelector(s),frame=$('#portal');let activeKey=null,bundle=null,token=0,urls=[];
 function bytes(s){return Uint8Array.from(atob(s),c=>c.charCodeAt(0))}
 async function derive(password,salt){const p=await crypto.subtle.importKey('raw',new TextEncoder().encode(password),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt:bytes(salt),iterations:600000,hash:'SHA-256'},p,{name:'AES-GCM',length:256},false,['encrypt','decrypt'])}
-async function decrypt(e,key){return crypto.subtle.decrypt({name:'AES-GCM',iv:bytes(e.iv)},key,bytes(e.data))}
+async function decrypt(e,key){const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:bytes(e.iv)},key,bytes(e.data));if(e.compression!=='gzip')return plain;if(typeof DecompressionStream!=='function')throw new Error('当前浏览器不支持压缩档案，请升级浏览器');return new Response(new Blob([plain]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer()}
 async function envelope(path){let r=await fetch(path,{cache:'no-store'});if(!r.ok)throw new Error('文件未能载入');let e=await r.json();if(!e.parts)return e;if(!e.parts.every(p=>/^[a-f0-9]{64}\.enc\.\d{3}$/.test(p)))throw new Error('分卷格式无效');return JSON.parse((await Promise.all(e.parts.map(async p=>{let r=await fetch('files/'+p);if(!r.ok)throw new Error('分卷缺失');return r.text()}))).join(''))}
 async function prepareTrainingVault(key,current){
  const storageKey='shiji.training.enc.v1';let initial=null,recovery=false;
