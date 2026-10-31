@@ -14,6 +14,7 @@
   const ratio=logo.naturalWidth&&logo.naturalHeight?logo.naturalWidth/logo.naturalHeight:1;
   logo.style.height=bounds.height+'px';
   logo.style.width=bounds.height*ratio+'px';
+  logo.style.left=Math.min(0,bounds.left-box.left-bounds.height*ratio-8)+'px';
   logo.style.top=(bounds.top-box.top+bounds.height/2)+'px';
  };
  align();
