@@ -1,0 +1,36 @@
+/* Logo text bounds alignment begin */
+(()=>{
+ if(!document.createRange)return;
+ const brand=document.querySelector('.gate-brand,.brand');
+ const title=brand?.classList.contains('gate-brand')?brand:brand?.querySelector(':scope > span');
+ const logo=brand?.querySelector(':scope > img.visual-brand-logo');
+ const text=title&&Array.from(title.childNodes).find(node=>node.nodeType===3&&node.textContent.includes('拾级'));
+ if(!text||!logo||!document.createRange)return;
+ const range=document.createRange(),start=text.textContent.indexOf('拾级');
+ range.setStart(text,start);range.setEnd(text,start+2);
+ const align=()=>{
+  const bounds=range.getBoundingClientRect(),box=brand.getBoundingClientRect();
+  if(!(bounds.height>0))return;
+  const ratio=logo.naturalWidth&&logo.naturalHeight?logo.naturalWidth/logo.naturalHeight:1;
+  logo.style.height=bounds.height+'px';
+  logo.style.width=bounds.height*ratio+'px';
+  logo.style.top=(bounds.top-box.top+bounds.height/2)+'px';
+ };
+ align();
+ logo.addEventListener('load',align);
+ window.addEventListener('resize',align,{passive:true});
+ document.fonts?.ready.then(align);
+ if(typeof ResizeObserver!=='undefined')new ResizeObserver(align).observe(brand);
+})();
+/* Logo text bounds alignment end */
+import {PlainLRU,verifiedCipher} from './cache.mjs';
+const $=s=>document.querySelector(s),frame=$('#portal'),memory=new PlainLRU(),pending=new Map(),urls=new Map();let key,core,boot,epoch=0,vault;const requests=[];window.lazyDiagnostics={requests,memory};
+const bytes=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0)),hex=b=>Array.from(new Uint8Array(b),x=>x.toString(16).padStart(2,'0')).join('');
+async function load(id,meta=core.manifest[id]){const cached=memory.get(id);if(cached)return cached;if(pending.has(id))return pending.get(id);const current=epoch,p=(async()=>{const cache=await caches.open('shiji-cipher-'+boot.releaseId),url=new URL(meta.path,location.href),b=await verifiedCipher({cache,url,hash:meta.cipherSha256,fetcher:u=>{requests.push(id);return fetch(u)},digest:async b=>hex(await crypto.subtle.digest('SHA-256',b))});const decrypted=await crypto.subtle.decrypt({name:'AES-GCM',iv:b.slice(0,12),additionalData:new TextEncoder().encode(JSON.stringify(['shiji-modular-v1',boot.releaseId,id,1]))},key,b.slice(12)),plain=await new Response(new Blob([decrypted]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();if(current!==epoch)throw Error('已锁定');if(plain.byteLength!==meta.plainBytes)throw Error('分片大小错误');const value=JSON.parse(new TextDecoder().decode(plain));memory.set(id,value,plain.byteLength);return value})();pending.set(id,p);try{return await p}finally{pending.delete(id)}}
+const resourceMeta=new Map();function register(value){if(!value||typeof value!=='object')return;for(const [p,m]of Object.entries(value._assets||{}))resourceMeta.set(p,m);if(Array.isArray(value))value.forEach(register);else for(const [k,v]of Object.entries(value))if(k!=='_assets')register(v)}
+async function assetURL(p){p=decodeURI(p).split('#')[0];if(urls.has(p))return urls.get(p);const d=await load('resource/'+p,resourceMeta.get(p)),data=bytes(d.base64),url=URL.createObjectURL(new Blob([data],{type:d.mime}));urls.set(p,url);return url}
+async function training(){if(!vault){const {prepareVault}=await import('./vault.mjs'),current=epoch;vault=await prepareVault({key,valid:()=>current===epoch,demo:new URLSearchParams(location.search).get('demo')==='1'});window.mathTrainingVault=vault}await vault.flush?.().catch(()=>{});return vault}
+async function openPDF(request){const p=core.visual.context.papers.find(p=>p.id===request.id||p.paper_id===request.id);if(!p)return;$('#pdfTitle').textContent=p.title;$('#pdfStatus').textContent='正在打开原卷…';$('#pdfDialog').showModal();try{const url=await assetURL(p.local_pdf);$('#pdfFrame').src=url+'#page='+Math.max(1,Number(request.page)||1);$('#pdfDownload').href=url;$('#pdfDownload').download=p.file;$('#pdfDownload').hidden=false;$('#pdfStatus').textContent=''}catch{$('#pdfStatus').textContent='原卷未能打开，请稍后重试。'}}
+$('#unlock').onsubmit=async e=>{e.preventDefault();$('#unlockButton').disabled=true;$('#message').textContent='正在打开…';const current=++epoch;try{boot=await(await fetch('bootstrap.json',{cache:'no-store'})).json();const material=await crypto.subtle.importKey('raw',new TextEncoder().encode($('#password').value),'PBKDF2',false,['deriveKey']);$('#password').value='';key=await crypto.subtle.deriveKey({name:'PBKDF2',salt:bytes(boot.salt),iterations:boot.iterations,hash:'SHA-256'},material,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);core=await load('core',boot.core);if(current!==epoch)return;if(!core.visual)throw Error('视觉壳缺失');register(core.visual.context.papers);window.visualBridge={context:core.visual.context,bankStats:core.visual.bankStats,exam:async id=>{const d=await load('exam/'+id);register(d);return d},bank:async()=>{const rows=[];for(const id of core.routes.bank)rows.push(...(await load(id)).rows);return rows},question:async(id,row)=>{const q=(await load(row.detail,row.meta)).question;register(q);return q},training,trainingBackup:async()=>{const sessions=[];for(const id of core.routes.practice)sessions.push(...(await load(id)).rows);return {version:1,sessions}},assetURL,ready(){if(current===epoch){frame.hidden=false;$('#gate').hidden=true;$('#lock').hidden=false;$('#message').textContent=''}},failed(message){$('#message').textContent=message}};const controller=core.visual.controller.replace(/<\/script/gi,'<\\/script');frame.hidden=false;$('#gate').hidden=true;$('#lock').hidden=false;frame.srcdoc=core.visual.html.replace('</body>','<script src="visual-baseline/vendor/d3.v7.9.0.min.js"></script><script src="visual-baseline/force-tree.js"></script><script src="visual-baseline/charts.js"></script><script>'+controller+'</script><script src="visual-frame.js"></script></body>');}catch{$('#message').textContent='未能解锁，请核对口令或稍后重试。';key=null;core=null;memory.clear()}finally{$('#unlockButton').disabled=false}};
+async function exportRecord(name){const ids=core.visual.exports?.[name];if(!ids)return;const chunks=[];for(const id of ids)chunks.push((await load(id)).text);const url=URL.createObjectURL(new Blob(chunks,{type:name.endsWith('.json')?'application/json':'text/markdown;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+$('#pdfClose').onclick=()=>{$('#pdfDialog').close();$('#pdfFrame').src='about:blank'};$('#lock').onclick=()=>{epoch++;try{frame.contentWindow.stopKnowledgeTree?.();window.removeEventListener('hashchange',frame.contentWindow.route);window.removeEventListener('popstate',frame.contentWindow.route)}catch{}frame.srcdoc='';frame.hidden=true;$('#gate').hidden=false;$('#lock').hidden=true;key=null;core=null;vault=null;memory.clear();pending.clear();resourceMeta.clear();for(const u of urls.values())URL.revokeObjectURL(u);urls.clear();delete window.mathTrainingVault;delete window.visualBridge;$('#password').value='';$('#message').textContent=''};window.addEventListener('message',e=>{if(e.source!==frame.contentWindow||!core||e.origin!==location.origin)return;if(e.data?.type==='math-open-paper')openPDF(e.data);if(e.data?.type==='math-export-record')exportRecord(e.data.name).catch(()=>{$('#message').textContent='导出未完成，请重试'})});

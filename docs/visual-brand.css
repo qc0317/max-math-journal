@@ -1,0 +1,6 @@
+/* Only the explicitly authorised Logo/version additions. Absolute positioning preserves baseline geometry. */
+.gate-brand,.brand{position:relative}.gate-brand{padding-left:64px}.brand{padding-left:56px}.visual-brand-logo{position:absolute;width:auto;height:1em;object-fit:contain;left:0;top:50%;transform:translateY(-50%)}.gate-intro{position:relative}.visual-login-version{position:absolute;right:0;top:0;font-size:10px;letter-spacing:0;line-height:inherit}.brand>.visual-site-version{position:absolute;left:0;bottom:-17px;font-size:10px;line-height:1;letter-spacing:0;font-weight:400;color:#888}
+.visual-current-version{position:absolute;left:0;top:0;white-space:nowrap;color:#878787;font:inherit;letter-spacing:inherit}
+@media(max-width:900px){.brand{padding-left:52px}}
+@media(max-width:720px){.brand{padding-left:48px}}
+@media(max-width:520px){.gate-brand{padding-left:54px}}
