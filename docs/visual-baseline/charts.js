@@ -1,7 +1,7 @@
 function attentionClass(c){const n=c.correct+c.wrong;return !n?'attention-empty':c.correct/n<.7?'attention-red':c.correct/n<.8?'attention-yellow':'attention-neutral'}
 function attentionColor(c){return {'attention-red':'#b54b42','attention-yellow':'#b99025','attention-empty':'#bdbdbd','attention-neutral':'#222'}[attentionClass(c)]}
 /* Default: accumulated performance. Knowledge structure uses the selected monochrome D3 force tree. */
-let chartMode=new URLSearchParams((window.parent!==window?window.parent.location.search:location.search)).get('chart')==='force'?'force':'bars',chartEventsReady=false;
+let chartMode=new URLSearchParams(location.search).get('chart')==='force'?'force':'bars',chartEventsReady=false;
 const domainIntroductions={number:'研究数的性质、运算，以及代数式的表示与变形。',equation:'用等式与不等式描述关系，求解并讨论条件。',function:'研究变量间的对应关系、变化规律及其图像。',geometry:'研究图形性质、空间关系与几何证明。',statistics:'从数据中提取信息，分析随机现象与不确定性。',application:'综合运用数学工具，完成建模、计数与推理论证。'};
 
 const domainIntroductionLines={number:['研究数的性质、运算，','以及代数式的表示与变形。'],equation:['用等式与不等式描述关系，','求解并讨论条件。'],function:['研究变量间的对应关系，','变化规律及其图像。'],geometry:['研究图形性质、空间关系','与几何证明。'],statistics:['从数据中提取信息，','分析随机现象与不确定性。'],application:['综合运用数学工具，','完成建模、计数与推理论证。']};
