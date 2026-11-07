@@ -24,8 +24,38 @@
  if(typeof ResizeObserver!=='undefined')new ResizeObserver(align).observe(brand);
 })();
 /* Logo text bounds alignment end */
+/* DEV tree typography begin */
+(()=>{
+ const original=window.updateTreeLabels;
+ if(typeof original!=='function')return;
+ window.updateTreeLabels=()=>{
+  if(!knowledgeTreeState)return original();
+  const {svg,node}=knowledgeTreeState,element=svg.node(),bounds=element.getBoundingClientRect(),view=element.viewBox?.baseVal;
+  if(!(bounds.width>0&&bounds.height>0))return original();
+  const scale=1/Math.min(bounds.width/(view?.width||1100),bounds.height/(view?.height||650));
+  element.style.setProperty('--tree-type-scale',String(scale));
+  node.each(function(){
+   const label=this.querySelector('.tree-label'),count=this.querySelector('.tree-count');
+   if(!label||!count)return;
+   const side=label.getAttribute('text-anchor')==='end'?-1:1;
+   label.setAttribute('x',side*9*scale);count.setAttribute('x',side*9*scale);
+   label.setAttribute('y',-4*scale);count.setAttribute('y',0);
+   const labelBox=label.getBBox(),countBox=count.getBBox();
+   count.setAttribute('y',labelBox.y+labelBox.height+3*scale-countBox.y);
+  });
+  return original();
+ };
+ const refresh=()=>{if(knowledgeTreeState)window.updateTreeLabels()};
+ window.addEventListener('resize',refresh,{passive:true});document.fonts?.ready.then(refresh);
+ const svg=document.querySelector('#knowledgeTree');
+ if(svg&&typeof ResizeObserver!=='undefined')new ResizeObserver(refresh).observe(svg);
+})();
+/* DEV tree typography end */
 /* Async data adapter beneath the unchanged v1.2.0 DOM/renderers. Classic script scope. */
 (async()=>{const bridge=window.parent.visualBridge,loadedExams=new Set(),bankRows=new Map();let bankPromise,bankScriptLoaded=false,printPromise,serial=0;
+ // Original PDFs are encrypted resources; never navigate to their private source paths.
+ document.addEventListener('click',event=>{const link=event.target.closest('a[href]');if(!link)return;let href;try{href=decodeURI(link.getAttribute('href').split('#')[0])}catch{return}const paper=D.papers.find(p=>p.local_pdf===href);if(!paper)return;event.preventDefault();event.stopImmediatePropagation();window.parent.postMessage({type:'math-open-paper',id:paper.paper_id||paper.id,download:link.hasAttribute('download')},window.parent.location.origin);},true);
+
  const repairStatus=await fetch('dev-repair-status.json',{cache:'no-store'}).then(r=>r.ok?r.json():{}).catch(()=>({}));
  const repairLabel=q=>repairStatus.question_status?.[q.id]||(q.readiness==='needs_review'?'待独立QA':'');
  const repairSummary=()=>{const xs=Object.values(repairStatus.batches||{});return xs.length?'工作台：'+xs.map(x=>`${x.batch} ${x.status}（${x.total}题）`).join(' · '):''};
