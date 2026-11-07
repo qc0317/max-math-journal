@@ -1,0 +1,27 @@
+{
+  "observed_at": "2026-11-07T23:31:12.583386+00:00",
+  "course": "资优生 · 六年级",
+  "owner": "小欧",
+  "qa_owner": "小磊",
+  "tested_build": "LOCAL-FULL-20261030-f41e144c79b3",
+  "tested_sha256": "189541ecd305fede21a6a306efcbee9c08df084b1b0eca8b26a0653e05035f2f",
+  "live": {
+    "url": "http://127.0.0.1:8781/",
+    "reachable": false,
+    "sha256": null
+  },
+  "same_dev": false,
+  "scope": 184,
+  "declared_scope": 184,
+  "covered": 184,
+  "passed": 164,
+  "issues": 2,
+  "excluded": 18,
+  "remaining": 0,
+  "unclassified": 0,
+  "content_hash_bound": 0,
+  "qa_updated_at": "2026-11-01T23:55:14.454130+00:00",
+  "status": "复验结果待整批验收",
+  "evidence": "详细证据见本地工作台",
+  "note": "发布时的只读QA进度快照，不自动反映本地后续变化；结论尚需整批验收。"
+}
