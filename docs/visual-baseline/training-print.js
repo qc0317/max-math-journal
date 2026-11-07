@@ -13,7 +13,7 @@ function paperNewPage(first){
  sheet.append(header,body,footer);document.querySelector('#paperPages').append(sheet);return body;
 }
 function paperBlock(number,text,continued=false,answerHeight=0){
- const box=paperElement('article','paper-question'),stem=paperElement('div','paper-question-stem');stem.append(paperElement('strong','paper-number',`${number}.${continued?'（续）':''}`));stem.append(paperElement('div','paper-question-text',text));box.append(stem);
+ const box=paperElement('article','paper-question'),stem=paperElement('div','paper-question-stem');stem.append(paperElement('strong','paper-number',`${number}.${continued?'（续）':''}`));const rendered=paperElement('div','paper-question-text');rendered.innerHTML=bankMathText(text);stem.append(rendered);box.append(stem);
  if(answerHeight){const space=paperElement('div','paper-answer-space');space.style.height=answerHeight+'mm';space.setAttribute('aria-label','作答区');box.append(space)}
  return box;
 }
@@ -31,7 +31,7 @@ function renderPaperPages(){
    const candidate=paperBlock(index+1,rest.join(''),continued,0);body.append(candidate);
    if(paperFits(body)){rest=[];const space=paperElement('div','paper-answer-space');space.style.height=spacing+'mm';candidate.append(space);if(!paperFits(body)){space.remove();body=paperNewPage(false);body.append(paperBlock(index+1,'作答区',true,spacing))}break}
    const textBox=candidate.querySelector('.paper-question-text');let lo=1,hi=rest.length,best=0;
-   while(lo<=hi){const mid=Math.floor((lo+hi)/2);textBox.textContent=rest.slice(0,mid).join('');if(paperFits(body)){best=mid;lo=mid+1}else hi=mid-1}
+   while(lo<=hi){const mid=Math.floor((lo+hi)/2);textBox.innerHTML=bankMathText(rest.slice(0,mid).join(''));if(paperFits(body)){best=mid;lo=mid+1}else hi=mid-1}
    if(!best){candidate.remove();if(body.children.length){body=paperNewPage(false);continue}throw Error('当前题目无法排入A4页面，请缩短单行内容后重试。')}
    const prefix=rest.slice(0,best).join(''),paragraph=prefix.lastIndexOf('\n');if(paragraph>prefix.length*.65)best=Array.from(prefix.slice(0,paragraph+1)).length;
    textBox.textContent=rest.slice(0,best).join('');rest=rest.slice(best);continued=true;body=paperNewPage(false);

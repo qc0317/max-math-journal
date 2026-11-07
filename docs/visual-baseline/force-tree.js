@@ -79,3 +79,4 @@ function bindKnowledgeTreeControls(){
  document.querySelector('#treeZoomIn').addEventListener('click',()=>{treeManualCamera=true;knowledgeTreeState.svg.transition().duration(200).call(knowledgeZoom.scaleBy,1.3)});
  document.querySelector('#treeZoomOut').addEventListener('click',()=>{treeManualCamera=true;knowledgeTreeState.svg.transition().duration(200).call(knowledgeZoom.scaleBy,1/1.3)});
 }
+
