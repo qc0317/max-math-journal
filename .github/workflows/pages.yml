@@ -14,7 +14,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 75
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -70,7 +70,7 @@ jobs:
             });
             if (!deployment.id) throw Error('GitHub did not return a Pages deployment');
             core.setOutput('page_url', deployment.page_url);
-            const deadline = Date.now() + 30 * 60 * 1000;
+            const deadline = Date.now() + 60 * 60 * 1000;
             const failed = new Set(['errored', 'deployment_failed', 'deployment_content_failed', 'deployment_cancelled', 'deployment_perms_error', 'deployment_lost', 'auth_error', 'rendering_error', 'artifact_fetch_failed', 'artifact_unpack_failed']);
             let last = '', errors = 0;
             while (Date.now() < deadline) {
@@ -87,4 +87,4 @@ jobs:
               if (failed.has(status)) throw Error('Pages deployment failed: ' + status);
               await new Promise(resolve => setTimeout(resolve, 10000));
             }
-            throw Error('Pages still processing after 30 minutes; inspect the native deployment before retrying.');
+            throw Error('Pages still processing after 60 minutes; inspect the native deployment before retrying.');
