@@ -26,6 +26,6 @@ $$('nav button').forEach(b=>b.onclick=()=>{$$('nav button').forEach(x=>x.classLi
 $('#content').onclick=e=>{if(readOnly)return;const card=e.target.closest('[data-task]');if(card)openTask(state.tasks.find(x=>x.id===card.dataset.task))};
 $('#saveTask').onclick=async e=>{e.preventDefault();const data=Object.fromEntries(new FormData($('#taskForm')));const id=data.id;delete data.id;await api(id?`/api/items/tasks/${id}`:'/api/items/tasks',{method:id?'PATCH':'POST',body:JSON.stringify(data)});$('#taskDialog').close();await load()};
 function scheduleRefresh(){if(refreshTimer)clearInterval(refreshTimer);refreshTimer=document.hidden?null:setInterval(load,30000)}
-document.addEventListener('visibilitychange',()=>{scheduleRefresh();if(!document.hidden)load()});
+document.addEventListener('visibilitychange',()=>{scheduleRefresh();if(!document.hidden&&["overview","library","work","todos"].includes(view))load()});
 
 

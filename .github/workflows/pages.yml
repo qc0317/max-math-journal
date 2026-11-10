@@ -20,9 +20,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      - name: Prepare current public site
+        shell: bash
+        run: |
+          set -euo pipefail
+          publish_dir="${RUNNER_TEMP}/levelup-pages"
+          release_id="$(node -p "require('./docs/bootstrap.json').releaseId")"
+          [[ "$release_id" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}-v[0-9]+\.[0-9]+\.[0-9]+-[a-f0-9]{12}$ ]]
+          mkdir -p "$publish_dir/releases"
+          rsync -a --exclude='/releases/' docs/ "$publish_dir/"
+          cp -a "docs/releases/$release_id" "$publish_dir/releases/"
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: docs
+          path: ${{ runner.temp }}/levelup-pages
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4

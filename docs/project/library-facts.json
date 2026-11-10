@@ -1,1 +1,544 @@
-{"books": {}, "note": "公开摘要不包含业务源明细；本地后台显示实时统计。"}
+{
+  "books": {},
+  "note": "发布时的只读统计，不实时同步本地。",
+  "course_progress": {
+    "status": "ok",
+    "data_source": "发布时已冻结的DEV",
+    "books": {
+      "6数学《市北初级中学资优生培养教材-练习册》 .pdf": {
+        "raw": 1305,
+        "total": 878,
+        "available": 878,
+        "pending": 0,
+        "excluded": 427,
+        "exclusions": {
+          "重复 / 已拆合旧记录": 426,
+          "非题目来源": 1,
+          "其他排除": 0
+        },
+        "pending_groups": {},
+        "qa": {
+          "passed": 0,
+          "issues": 0,
+          "unverified": 878,
+          "changed_pending_recheck": 174,
+          "never_checked": 704,
+          "history_issues": 2,
+          "issues_still_available": 0,
+          "groups": {},
+          "next": "详细问题和后续处理见本地工作台",
+          "report": "发布时的QA计数快照"
+        },
+        "final_acceptance": {
+          "ok": true,
+          "qualified": 878,
+          "qa_accepted": 872,
+          "user_approved": 6,
+          "unresolved": 0,
+          "current_records_unchanged": true,
+          "pending_recheck": 0,
+          "technical_recheck": 0,
+          "needs_decision": 0,
+          "source_unfixed": 0,
+          "tested_at": "2026-11-08T23:56:44.118Z",
+          "report": "详细验收依据见本地工作台",
+          "scope_note": "当前入库有效题验收；原书全书覆盖另核，不宣称已无漏录。"
+        },
+        "qa_history": {
+          "kind": "full_initial_audit",
+          "current_scope": 878,
+          "historically_covered": 867,
+          "without_initial_id_link": 11,
+          "initial_scope": 906,
+          "initial_passed": 613,
+          "initial_blocked": 293,
+          "current_ids_initial_passed": 613,
+          "current_ids_initial_blocked": 254,
+          "followup_scope": 184,
+          "note": "历史QA保留，当前未变验收继续继承；详细证据见本地工作台",
+          "report": "详细依据见本地工作台"
+        }
+      },
+      "7数学《市北初级中学资优生培养教材-练习册》.pdf": {
+        "raw": 746,
+        "total": 504,
+        "available": 504,
+        "pending": 0,
+        "excluded": 242,
+        "exclusions": {
+          "重复 / 已拆合旧记录": 229,
+          "非题目来源": 13,
+          "其他排除": 0
+        },
+        "pending_groups": {},
+        "qa": {
+          "passed": 0,
+          "issues": 0,
+          "unverified": 504,
+          "changed_pending_recheck": 482,
+          "never_checked": 22,
+          "history_issues": 252,
+          "issues_still_available": 0,
+          "groups": {},
+          "next": "详细问题和后续处理见本地工作台",
+          "report": "发布时的QA计数快照"
+        },
+        "final_acceptance": {
+          "ok": true,
+          "qualified": 504,
+          "qa_accepted": 492,
+          "user_approved": 12,
+          "unresolved": 0,
+          "current_records_unchanged": true,
+          "pending_recheck": null,
+          "technical_recheck": 0,
+          "needs_decision": null,
+          "source_unfixed": null,
+          "tested_at": "2026-11-08T14:18:17.749Z",
+          "report": "详细验收依据见本地工作台",
+          "scope_note": "当前入库有效题验收；原书全书覆盖另核，不宣称已无漏录。"
+        }
+      },
+      "8数学《市北初级中学资优生培养教材-练习册》.pdf": {
+        "raw": 752,
+        "total": 533,
+        "available": 533,
+        "pending": 0,
+        "excluded": 219,
+        "exclusions": {
+          "重复 / 已拆合旧记录": 209,
+          "非题目来源": 10,
+          "其他排除": 0
+        },
+        "pending_groups": {},
+        "qa": {
+          "passed": 0,
+          "issues": 0,
+          "unverified": 533,
+          "changed_pending_recheck": 392,
+          "never_checked": 141,
+          "history_issues": 206,
+          "issues_still_available": 0,
+          "groups": {},
+          "next": "详细问题和后续处理见本地工作台",
+          "report": "发布时的QA计数快照"
+        },
+        "final_acceptance": {
+          "ok": true,
+          "qualified": 533,
+          "qa_accepted": 532,
+          "user_approved": 1,
+          "unresolved": 0,
+          "current_records_unchanged": true,
+          "pending_recheck": 0,
+          "technical_recheck": 0,
+          "needs_decision": 0,
+          "source_unfixed": 0,
+          "tested_at": "2026-11-10T15:37:42.742792+00:00",
+          "report": "详细验收依据见本地工作台",
+          "scope_note": "当前入库有效题验收；原书全书覆盖另核，不宣称已无漏录。"
+        }
+      },
+      "9数学《市北初级中学资优生培养教材-练习册》.pdf": {
+        "raw": 818,
+        "total": 526,
+        "available": 526,
+        "pending": 0,
+        "excluded": 292,
+        "exclusions": {
+          "重复 / 已拆合旧记录": 233,
+          "非题目来源": 59,
+          "其他排除": 0
+        },
+        "pending_groups": {},
+        "qa": {
+          "passed": 60,
+          "issues": 0,
+          "unverified": 466,
+          "changed_pending_recheck": 381,
+          "never_checked": 85,
+          "history_issues": 379,
+          "issues_still_available": 0,
+          "groups": {},
+          "next": "详细问题和后续处理见本地工作台",
+          "report": "发布时的QA计数快照"
+        },
+        "final_acceptance": {
+          "ok": true,
+          "qualified": 526,
+          "qa_accepted": 518,
+          "user_approved": 8,
+          "unresolved": 0,
+          "current_records_unchanged": true,
+          "pending_recheck": null,
+          "technical_recheck": 0,
+          "needs_decision": null,
+          "source_unfixed": null,
+          "tested_at": "2026-11-08T20:00:48.646991+08:00",
+          "report": "详细验收依据见本地工作台",
+          "scope_note": "当前入库有效题验收；原书全书覆盖另核，不宣称已无漏录。"
+        }
+      },
+      "奥数精讲与测试六年级.pdf": {
+        "raw": 1216,
+        "total": 846,
+        "available": 846,
+        "pending": 0,
+        "excluded": 370,
+        "exclusions": {
+          "重复 / 已拆合旧记录": 239,
+          "非题目来源": 130,
+          "其他排除": 1
+        },
+        "pending_groups": {},
+        "qa": {
+          "passed": 0,
+          "issues": 0,
+          "unverified": 846,
+          "changed_pending_recheck": 0,
+          "never_checked": 846,
+          "history_issues": 0,
+          "issues_still_available": 0,
+          "groups": {},
+          "next": "详细问题和后续处理见本地工作台",
+          "report": "发布时的QA计数快照"
+        },
+        "final_acceptance": {
+          "ok": true,
+          "qualified": 846,
+          "qa_accepted": 846,
+          "user_approved": 0,
+          "unresolved": 0,
+          "current_records_unchanged": true,
+          "pending_recheck": 0,
+          "technical_recheck": 0,
+          "needs_decision": 0,
+          "source_unfixed": 0,
+          "tested_at": "2026-11-10T16:01:16.704769+00:00",
+          "report": "详细验收依据见本地工作台",
+          "scope_note": "当前入库有效题验收；原书全书覆盖另核，不宣称已无漏录。"
+        },
+        "qa_history": {
+          "kind": "risk_based_audit",
+          "scope": 847,
+          "mechanical": 847,
+          "semantic": 515,
+          "passed": 58,
+          "high_risk": 184,
+          "note": "历史QA保留，当前未变验收继续继承；详细证据见本地工作台",
+          "report": "详细依据见本地工作台"
+        }
+      },
+      "奥数精讲与测试七年级.pdf": {
+        "raw": 1049,
+        "total": 714,
+        "available": 714,
+        "pending": 0,
+        "excluded": 335,
+        "exclusions": {
+          "重复 / 已拆合旧记录": 210,
+          "非题目来源": 125,
+          "其他排除": 0
+        },
+        "pending_groups": {},
+        "qa": {
+          "passed": 0,
+          "issues": 0,
+          "unverified": 714,
+          "changed_pending_recheck": 0,
+          "never_checked": 714,
+          "history_issues": 0,
+          "issues_still_available": 0,
+          "groups": {},
+          "next": "详细问题和后续处理见本地工作台",
+          "report": "发布时的QA计数快照"
+        },
+        "final_acceptance": {
+          "ok": true,
+          "qualified": 714,
+          "qa_accepted": 710,
+          "user_approved": 4,
+          "unresolved": 0,
+          "current_records_unchanged": true,
+          "pending_recheck": 0,
+          "technical_recheck": 0,
+          "needs_decision": 0,
+          "source_unfixed": 0,
+          "tested_at": "2026-11-10T17:14:51.115546+00:00",
+          "report": "详细验收依据见本地工作台",
+          "scope_note": "当前入库有效题验收；原书全书覆盖另核，不宣称已无漏录。"
+        },
+        "qa_history": {
+          "kind": "risk_based_audit",
+          "scope": 714,
+          "mechanical": 714,
+          "semantic": 460,
+          "passed": 170,
+          "high_risk": 278,
+          "note": "历史QA保留，当前未变验收继续继承；详细证据见本地工作台",
+          "report": "详细依据见本地工作台"
+        }
+      },
+      "奥数精讲与测试八年级.pdf": {
+        "raw": 1070,
+        "total": 759,
+        "available": 759,
+        "pending": 0,
+        "excluded": 311,
+        "exclusions": {
+          "重复 / 已拆合旧记录": 123,
+          "非题目来源": 188,
+          "其他排除": 0
+        },
+        "pending_groups": {},
+        "qa": {
+          "passed": 60,
+          "issues": 0,
+          "unverified": 699,
+          "changed_pending_recheck": 50,
+          "never_checked": 649,
+          "history_issues": 8,
+          "issues_still_available": 0,
+          "groups": {},
+          "next": "详细问题和后续处理见本地工作台",
+          "report": "发布时的QA计数快照"
+        },
+        "qa_history": {
+          "kind": "risk_based_audit",
+          "scope": 728,
+          "mechanical": 728,
+          "semantic": 588,
+          "passed": 141,
+          "high_risk": 259,
+          "note": "历史QA保留，当前未变验收继续继承；详细证据见本地工作台",
+          "report": "详细依据见本地工作台"
+        }
+      },
+      "奥数精讲与测试九年级.pdf": {
+        "raw": 1154,
+        "total": 840,
+        "available": 830,
+        "pending": 10,
+        "excluded": 314,
+        "exclusions": {
+          "重复 / 已拆合旧记录": 120,
+          "非题目来源": 194,
+          "其他排除": 0
+        },
+        "pending_groups": {},
+        "qa": {
+          "passed": 658,
+          "issues": 13,
+          "unverified": 169,
+          "changed_pending_recheck": 4,
+          "never_checked": 165,
+          "history_issues": 13,
+          "issues_still_available": 13,
+          "groups": {},
+          "next": "详细问题和后续处理见本地工作台",
+          "report": "发布时的QA计数快照"
+        }
+      },
+      "交大之星：初中数学综合技能训练六年级上册.pdf": {
+        "raw": 71,
+        "total": 71,
+        "available": 71,
+        "pending": 0,
+        "excluded": 0,
+        "exclusions": {
+          "重复 / 已拆合旧记录": 0,
+          "非题目来源": 0,
+          "其他排除": 0
+        },
+        "pending_groups": {},
+        "qa": {
+          "passed": 71,
+          "issues": 0,
+          "unverified": 0,
+          "changed_pending_recheck": 0,
+          "never_checked": 0,
+          "history_issues": 0,
+          "issues_still_available": 0,
+          "groups": {},
+          "next": "详细问题和后续处理见本地工作台",
+          "report": "发布时的QA计数快照"
+        }
+      },
+      "交大之星：初中数学综合技能训练六年级下册.pdf": {
+        "raw": 811,
+        "total": 803,
+        "available": 803,
+        "pending": 0,
+        "excluded": 8,
+        "exclusions": {
+          "重复 / 已拆合旧记录": 8,
+          "非题目来源": 0,
+          "其他排除": 0
+        },
+        "pending_groups": {},
+        "qa": {
+          "passed": 12,
+          "issues": 7,
+          "unverified": 784,
+          "changed_pending_recheck": 0,
+          "never_checked": 784,
+          "history_issues": 7,
+          "issues_still_available": 7,
+          "groups": {},
+          "next": "详细问题和后续处理见本地工作台",
+          "report": "发布时的QA计数快照"
+        }
+      },
+      "交大之星：初中数学综合技能训练七年级上册.pdf": {
+        "raw": 1018,
+        "total": 1018,
+        "available": 997,
+        "pending": 21,
+        "excluded": 0,
+        "exclusions": {
+          "重复 / 已拆合旧记录": 0,
+          "非题目来源": 0,
+          "其他排除": 0
+        },
+        "pending_groups": {},
+        "qa": {
+          "passed": 757,
+          "issues": 38,
+          "unverified": 223,
+          "changed_pending_recheck": 2,
+          "never_checked": 221,
+          "history_issues": 38,
+          "issues_still_available": 17,
+          "groups": {},
+          "next": "详细问题和后续处理见本地工作台",
+          "report": "发布时的QA计数快照"
+        }
+      },
+      "交大之星：初中数学综合技能训练七年级下册.pdf": {
+        "raw": 620,
+        "total": 620,
+        "available": 610,
+        "pending": 10,
+        "excluded": 0,
+        "exclusions": {
+          "重复 / 已拆合旧记录": 0,
+          "非题目来源": 0,
+          "其他排除": 0
+        },
+        "pending_groups": {},
+        "qa": {
+          "passed": 575,
+          "issues": 38,
+          "unverified": 7,
+          "changed_pending_recheck": 7,
+          "never_checked": 0,
+          "history_issues": 38,
+          "issues_still_available": 28,
+          "groups": {},
+          "next": "详细问题和后续处理见本地工作台",
+          "report": "发布时的QA计数快照"
+        }
+      },
+      "交大之星：初中数学综合技能训练八年级上册.pdf": {
+        "raw": 666,
+        "total": 666,
+        "available": 644,
+        "pending": 22,
+        "excluded": 0,
+        "exclusions": {
+          "重复 / 已拆合旧记录": 0,
+          "非题目来源": 0,
+          "其他排除": 0
+        },
+        "pending_groups": {},
+        "qa": {
+          "passed": 644,
+          "issues": 22,
+          "unverified": 0,
+          "changed_pending_recheck": 0,
+          "never_checked": 0,
+          "history_issues": 22,
+          "issues_still_available": 0,
+          "groups": {},
+          "next": "详细问题和后续处理见本地工作台",
+          "report": "发布时的QA计数快照"
+        }
+      },
+      "交大之星：初中数学综合技能训练八年级下册.pdf": {
+        "raw": 522,
+        "total": 522,
+        "available": 500,
+        "pending": 22,
+        "excluded": 0,
+        "exclusions": {
+          "重复 / 已拆合旧记录": 0,
+          "非题目来源": 0,
+          "其他排除": 0
+        },
+        "pending_groups": {},
+        "qa": {
+          "passed": 476,
+          "issues": 46,
+          "unverified": 0,
+          "changed_pending_recheck": 0,
+          "never_checked": 0,
+          "history_issues": 46,
+          "issues_still_available": 24,
+          "groups": {},
+          "next": "详细问题和后续处理见本地工作台",
+          "report": "发布时的QA计数快照"
+        }
+      },
+      "交大之星：初中数学综合技能训练九年级全一册.pdf": {
+        "raw": 399,
+        "total": 399,
+        "available": 385,
+        "pending": 14,
+        "excluded": 0,
+        "exclusions": {
+          "重复 / 已拆合旧记录": 0,
+          "非题目来源": 0,
+          "其他排除": 0
+        },
+        "pending_groups": {},
+        "qa": {
+          "passed": 385,
+          "issues": 14,
+          "unverified": 0,
+          "changed_pending_recheck": 0,
+          "never_checked": 0,
+          "history_issues": 14,
+          "issues_still_available": 0,
+          "groups": {},
+          "next": "详细问题和后续处理见本地工作台",
+          "report": "发布时的QA计数快照"
+        }
+      },
+      "6年级  尖子生夺冠  数的整除.pdf": {
+        "raw": 72,
+        "total": 72,
+        "available": 70,
+        "pending": 2,
+        "excluded": 0,
+        "exclusions": {
+          "重复 / 已拆合旧记录": 0,
+          "非题目来源": 0,
+          "其他排除": 0
+        },
+        "pending_groups": {},
+        "qa": {
+          "passed": 0,
+          "issues": 0,
+          "unverified": 72,
+          "changed_pending_recheck": 0,
+          "never_checked": 72,
+          "history_issues": 0,
+          "issues_still_available": 0,
+          "groups": {},
+          "next": "详细问题和后续处理见本地工作台",
+          "report": "发布时的QA计数快照"
+        }
+      }
+    }
+  }
+}
