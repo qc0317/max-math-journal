@@ -14,7 +14,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -51,10 +51,40 @@ jobs:
           console.log('Prepared verified current release:', id);
           NODE
       - uses: actions/upload-pages-artifact@v3
+        id: pages_artifact
         with:
           path: ${{ runner.temp }}/levelup-pages
-      - name: Deploy
+      - name: Deploy current artifact with GitHub Pages API
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/github-script@v7
+        env:
+          PAGES_ARTIFACT_ID: ${{ steps.pages_artifact.outputs.artifact_id }}
         with:
-          timeout: 1200000
+          script: |
+            const token = await core.getIDToken();
+            core.setSecret(token);
+            const artifactId = Number(process.env.PAGES_ARTIFACT_ID);
+            if (!Number.isSafeInteger(artifactId) || artifactId <= 0) throw Error('Missing verified Pages artifact');
+            const {data: deployment} = await github.request('POST /repos/{owner}/{repo}/pages/deployments', {
+              ...context.repo, artifact_id: artifactId, pages_build_version: context.sha, oidc_token: token
+            });
+            if (!deployment.id) throw Error('GitHub did not return a Pages deployment');
+            core.setOutput('page_url', deployment.page_url);
+            const deadline = Date.now() + 30 * 60 * 1000;
+            const failed = new Set(['errored', 'deployment_failed', 'deployment_content_failed', 'deployment_cancelled', 'deployment_perms_error', 'deployment_lost', 'auth_error', 'rendering_error', 'artifact_fetch_failed', 'artifact_unpack_failed']);
+            let last = '', errors = 0;
+            while (Date.now() < deadline) {
+              let status;
+              try {
+                const result = await github.request('GET /repos/{owner}/{repo}/pages/deployments/{deploymentId}', {...context.repo, deploymentId: deployment.id});
+                status = result.data.status; errors = 0;
+              } catch (error) {
+                if (++errors >= 5) throw Error('Pages status query repeatedly failed');
+                await new Promise(resolve => setTimeout(resolve, 10000)); continue;
+              }
+              if (status !== last) { core.info('Pages status: ' + status); last = status; }
+              if (status === 'succeed') { core.setOutput('status', 'succeed'); return deployment.page_url; }
+              if (failed.has(status)) throw Error('Pages deployment failed: ' + status);
+              await new Promise(resolve => setTimeout(resolve, 10000));
+            }
+            throw Error('Pages still processing after 30 minutes; inspect the native deployment before retrying.');
