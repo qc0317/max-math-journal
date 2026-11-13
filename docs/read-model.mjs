@@ -7,3 +7,24 @@ export function domainStats(curriculum,counts,stage='all'){return curriculum.dom
 export function rate(c){return c.correct+c.wrong?Math.round(c.correct/(c.correct+c.wrong)*100):null}
 export function attention(c){const r=rate(c);return r==null?'unseen':r<70?'danger':r<80?'warning':'normal'}
 export function routeIntent(location){const p=new URLSearchParams(location.search),raw=location.hash.slice(1);let route=raw||'home';if(p.get('section')==='exams')route='analysis';return {route,paper:p.get('paper_id')||p.get('paper')||p.get('exam')||'',question:p.get('question_id')||'',node:p.get('node')||''}}
+
+// Large question-to-node maps are carried in bounded model parts, then merged losslessly.
+export function partitionReadingModel(model,maxBytes=400000){
+ const encoder=new TextEncoder(),size=v=>encoder.encode(JSON.stringify(v)).length;
+ const {trainingNodeIndex={},...base}=model,parts=[{...base,trainingNodeIndex:{}}];
+ if(size(parts[0])>maxBytes)throw Error('Reading model base exceeds budget');
+ let index={},bytes=2;
+ const flush=()=>{if(Object.keys(index).length)parts.push({trainingNodeIndex:index});index={};bytes=2;};
+ for(const [id,node] of Object.entries(trainingNodeIndex)){
+  const added=size({[id]:node})-2+(bytes>2?1:0);
+  if(bytes+added>maxBytes-32)flush();
+  if(size({[id]:node})>maxBytes-32)throw Error('Reading model index entry exceeds budget');
+  index[id]=node;bytes+=size({[id]:node})-2+(bytes>2?1:0);
+ }
+ flush();return parts;
+}
+export function mergeReadingModels(parts){
+ const model=structuredClone(parts[0]||{});
+ for(const part of parts.slice(1)){const previous=model.trainingNodeIndex;Object.assign(model,part);if(part.trainingNodeIndex)model.trainingNodeIndex={...previous,...part.trainingNodeIndex};}
+ return model;
+}

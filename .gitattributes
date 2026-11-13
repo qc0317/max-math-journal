@@ -1,0 +1,3 @@
+
+# Encrypted payloads must never be treated as text.
+*.bin binary

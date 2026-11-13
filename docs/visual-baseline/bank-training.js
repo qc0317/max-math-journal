@@ -24,6 +24,16 @@ function bankMathText(value){
  function command(s,p){
   const m=/^\\([a-zA-Z]+)/.exec(s.slice(p));if(!m)return null;const name=m[1];let at=p+m[0].length;
   if(symbols[name])return{html:`<mo>${esc(symbols[name])}</mo>`,end:at};
+  if(name==='begin'){
+   const env=group(s,at);if(!env||env.body!=='vmatrix')return null;
+   const closer='\\end{vmatrix}',stop=s.indexOf(closer,env.end);if(stop<0)return null;
+   const body=s.slice(env.end,stop);if(body.includes('\\begin'))return null;
+   const rows=body.split('\\\\').map(row=>row.split('&'));
+   if(!rows.length||rows.length>8||!rows[0].length||rows[0].length>8||rows.some(row=>row.length!==rows[0].length))return null;
+   const cells=rows.map(row=>'<mtr>'+row.map(cell=>'<mtd><mrow>'+math(cell.trim())+'</mrow></mtd>').join('')+'</mtr>').join('');
+   return{html:'<mrow><mo stretchy="true">|</mo><mtable columnspacing="0.8em" rowspacing="0.35em">'+cells+'</mtable><mo stretchy="true">|</mo></mrow>',end:stop+closer.length};
+  }
+  if(name==='substack'){const a=group(s,at);if(!a)return null;const rows=[];let level=0,start=0;for(let j=0;j<a.body.length;j++){if(a.body[j]==='{')level++;if(a.body[j]==='}')level--;if(level===0&&a.body.startsWith(String.fromCharCode(92)+'cr ',j)){rows.push(a.body.slice(start,j));start=j+4;j+=3;}}rows.push(a.body.slice(start));if(!rows.length||rows.length>20)return null;return{html:'<mtable displaystyle="false" columnalign="left" rowspacing="0.25em">'+rows.map(row=>'<mtr><mtd style="padding:0"><mrow>'+math(row)+'</mrow></mtd></mtr>').join('')+'</mtable>',end:a.end};}
   if(name==='left'||name==='right')return{html:'',end:at};
   if(name==='quad'||name==='qquad')return{html:`<mspace width="${name==='quad'?1:2}em"/>`,end:at};
   if(name==='frac'||name==='tfrac'||name==='dfrac'){const a=argument(s,at);if(!a)return null;const b=argument(s,a.end);if(!b)return null;return{html:`<mfrac><mrow>${a.html}</mrow><mrow>${b.html}</mrow></mfrac>`,end:b.end};}
@@ -115,9 +125,10 @@ function openBankQuestion(id){
  const pages=source.source_pages||[source.page].filter(Boolean),answerPages=source.answer_source_pdf_pages||[source.answer_source_pdf_page].filter(Boolean);
  const sourceImages=bankDetailImages([source.source_image,...(source.source_images||[])],'题目原页');
  const answerImages=bankDetailImages([source.answer_image,...(source.answer_images||[])],'答案原页');
- const grade=q._review_gate?.label?q._review_gate.label:q.auto_review?.status==='A'?'A级候选':q.auto_review?.status==='C'?'识别片段／待整理':'待核对';
+ const expertFinalIsolation=q.answer_resolution==='expert_final_isolated'&&q.expert_adjudication?.decision_file?.startsWith('reviews/jdx7-semantic-judgment-ou-20261112/');
+ const grade=expertFinalIsolation?'原书条件错误（已隔离）':q.auto_review?.status==='A'?'A级候选':q.auto_review?.status==='C'?'识别片段／待整理':'待核对';
  const pendingBookAnswer=(/^JDX[789]/.test(q.id)||/^OMS[678]/.test(q.id)||/^JZS[6789]/.test(q.id))&&q.readiness!=='ready'&&q.answer_source?.answer_as_printed;
- const answer=(q.answer||q.solution)?`<details class="training-solution"><summary>查看答案与解题过程</summary><div class="analysis-body">${q.answer?`<p><b>${pendingBookAnswer?'原书答案（待核）':'答案'}</b></p><div class="statement">${bankMathText(q.answer)}</div>${pendingBookAnswer&&q.independent_answer?`<p><b>独立验算结果（待裁定）</b></p><div class="statement">${bankMathText(q.independent_answer)}</div>`:''}`:''}${q.solution?`<p><b>解题过程</b></p><div class="statement">${bankMathText(q.solution)}</div>`:''}${bankSolutionImages(q)}</div></details>`:'';
+ const answer=(q.answer||q.solution)?`<details class="training-solution"><summary>查看答案与解题过程</summary><div class="analysis-body">${q.answer?`<p><b>${pendingBookAnswer?(expertFinalIsolation?'原书答案（已留审计）':'原书答案（待核）'):'答案'}</b></p><div class="statement">${bankMathText(q.answer)}</div>${pendingBookAnswer&&q.independent_answer?`<p><b>${expertFinalIsolation?'专家最终隔离结论':'独立验算结果（待裁定）'}</b></p><div class="statement">${bankMathText(q.independent_answer)}</div>`:''}`:''}${q.solution?`<p><b>解题过程</b></p><div class="statement">${bankMathText(q.solution)}</div>`:''}${bankSolutionImages(q)}</div></details>`:'';
  const provenance=source.source_file?`<details style="margin-top:16px"><summary>核对原题与答案来源</summary><p>${esc(source.source_file)}</p><p>${source.exercise?'练习 '+esc(source.exercise)+' ':''}${source.production_split_label?esc(source.production_split_label)+' · ':(source.item_number?'第 '+esc(source.item_number)+' 题 · ':'')}题目 PDF 第 ${pages.map(esc).join('、')} 页${answerPages.length?'；答案 PDF 第 '+answerPages.map(esc).join('、')+' 页':''}</p>${sourceImages}${answerImages}</details>`:'';
  $('#dialogContent').innerHTML=`<div class="bank-detail-heading"><span>${esc(q.id)} · v${q.version||1}</span><span>${difficultyName(q)} · ${bankCanCompose(q)?'可组题':bankIsExcluded(q)?'历史记录（不可组题）':grade}</span></div><p class="hint">${bankMathText(q.readiness_note||'待人工核对原文、答案和标签。')}${q.duplicate_candidates?.length?' · 与 '+q.duplicate_candidates.map(esc).join('、')+' 摘要相同，需对照原题，尚未合并。':''}</p>${statement}${figures}${answer}${provenance}<div class="composer-actions"><button data-compose-node="${q.primary_node||''}">练同类题</button><button class="primary-action" data-bank-add="${id}" ${bankCanCompose(q)?'':'disabled'}>加入选题</button></div>`;
  $('#recordDialog').showModal();
