@@ -65,6 +65,55 @@ const REVIEW_VISIBLE_IDS=new Set(['TAL7B0030052','TAL7B0030160','TAL7B0030163','
 // Historical IDs remain directly searchable; review visibility never grants composition eligibility.
 function bankIsExcluded(q){return !!(q&&(q.duplicate_suppressed||q.non_question_source||['suppressed','duplicate_suppressed','excluded'].includes(q.readiness)));}
 function bankCanCompose(q){return !!q&&!bankIsExcluded(q)&&q.readiness==='ready';}
+// New source metadata is opt-in; legacy source labels and exact-file filters are preserved.
+const ZZPY_SOURCE_SERIES='自主招生培优讲义';
+const ZZPY_GRADE_LABELS={7:'七年级',8:'八年级',9:'九年级'};
+function bankSourceInfo(q){
+ const s=q.source||{};
+ if(s.kind==='exam_scan'||s.paper_id){const paper=(D.papers||[]).find(p=>p.paper_id===s.paper_id);return {value:s.paper_id,label:s.title||(paper&&paper.title)||s.source_file||s.paper_id,group:'试卷'};}
+ if(!s.source_file)return null;
+ const book=/^ZZPY([789])B(\d{3})$/.exec(String(s.book_id||''));
+ if(s.source_series===ZZPY_SOURCE_SERIES||book){
+  const statedGrade=Number(s.grade),grade=ZZPY_GRADE_LABELS[statedGrade]?statedGrade:book?Number(book[1]):null;
+  const statedTopic=Number(s.topic_number),topic=Number.isInteger(statedTopic)&&statedTopic>0?statedTopic:book?Number(book[2]):null;
+  let title=String(s.topic_title||s.source_file.replace(/\.pdf$/i,'')).trim();
+  if(topic&&!/^专题\s*\d+/.test(title))title='专题'+String(topic).padStart(2,'0')+' '+title;
+  return {value:s.source_file,label:title,group:ZZPY_SOURCE_SERIES+' · '+(ZZPY_GRADE_LABELS[grade]||'年级待标'),is_zzpy:true,series:ZZPY_SOURCE_SERIES,grade,topic_number:topic};
+ }
+ const group=/奥数精讲|奥精/.test(s.source_file)?'奥精':/资优生|市北初级中学/.test(s.source_file)?'资优生':/尖子生夺冠|尖子生/.test(s.source_file)?'尖子生':'其他书籍';
+ return {value:s.source_file,label:s.source_file,group};
+}
+function bankMatchesSource(q,value){
+ if(!value)return true;
+ if(value==='@ZZPY:series'){const info=bankSourceInfo(q);return !!info?.is_zzpy;}
+ const grade=/^@ZZPY:grade:([789])$/.exec(value);
+ if(grade){const info=bankSourceInfo(q);return !!info?.is_zzpy&&info.grade===Number(grade[1]);}
+ return q.source.paper_id===value||q.source.source_file===value;
+}
+function bankSourceSearchTerms(q){
+ const info=bankSourceInfo(q);return info?.is_zzpy?[info.series,ZZPY_GRADE_LABELS[info.grade]||'',info.grade?info.grade+'年级':'',info.label,info.value]:[];
+}
+function bankSourceOptions(rows){
+ const sourcePairs=rows.map(bankSourceInfo).filter(Boolean),sourceMap=new Map(sourcePairs.map(x=>[x.value,x])),grouped={};
+ for(const x of sourceMap.values())(grouped[x.group]??=[]).push(x);
+ const option=x=>'<option value="'+esc(x.value)+'">'+esc(x.label)+'</option>';
+ const legacy=names=>names.filter(g=>grouped[g]?.length).map(g=>'<optgroup label="'+g+'">'+grouped[g].sort((a,b)=>a.label.localeCompare(b.label,'zh-CN')).map(option).join('')+'</optgroup>').join('');
+ let html='<option value="">全部来源</option>'+legacy(['试卷','资优生','奥精','尖子生']);
+ const zzpy=[...sourceMap.values()].filter(x=>x.is_zzpy);
+ if(zzpy.length){
+  html+='<optgroup label="'+ZZPY_SOURCE_SERIES+'"><option value="@ZZPY:series">整个系列</option></optgroup>';
+  for(const grade of [7,8,9,null]){
+   const items=zzpy.filter(x=>x.grade===grade);if(!items.length)continue;
+   const gradeLabel=ZZPY_GRADE_LABELS[grade]||'年级待标';
+   items.sort((a,b)=>(a.topic_number??Infinity)-(b.topic_number??Infinity)||a.label.localeCompare(b.label,'zh-CN'));
+   html+='<optgroup label="'+ZZPY_SOURCE_SERIES+' · '+gradeLabel+'">';
+   if(grade)html+='<option value="@ZZPY:grade:'+grade+'">'+gradeLabel+'全部专题</option>';
+   html+=items.map(option).join('')+'</optgroup>';
+  }
+ }
+ return html+legacy(['其他书籍']);
+}
+// End opt-in source metadata helpers.
 const BANK_ALL=[...(D.question_bank.questions||[]),...((D.question_bank_staging&&D.question_bank_staging.questions)||[]),...(D.question_bank_review||[])];
 const BANK_HISTORY=BANK_ALL.filter(q=>(REVIEW_VISIBLE_IDS.has(q.id)||q.split_into?.length)&&bankIsExcluded(q));
 const BANK=BANK_ALL.filter(q=>!bankIsExcluded(q)), B=Object.fromEntries([...(D.question_bank_staging?.retired_history||[]),...BANK_HISTORY,...BANK].map(q=>[q.id,q])), chosenBank=new Set();
@@ -99,7 +148,7 @@ function validateTrainingBackup(v){
  }
 }
 function saveTrainings(){if(trainingVault){trainingVault.save(trainingStore).then(()=>{storageAvailable=true}).catch(()=>{storageAvailable=false;$('#trainingNotice').textContent='本机加密备份未能保存，请导出训练记录。'});return true}try{localStorage.setItem(TRAINING_KEY,JSON.stringify(trainingStore));storageAvailable=true;return true}catch{storageAvailable=false;$('#trainingNotice').textContent='浏览器未能保存，请立即导出备份；本次页面中的记录仍保留。';return false}}
-function bankFiltered(){const word=$('#bankSearch').value.trim().toLowerCase(),node=$('#bankNode').value,level=$('#bankLevel').value,ready=$('#bankReady').value,source=$('#bankPaper').value;const history=word?BANK_HISTORY.filter(q=>q.id.toLowerCase()===word):[];return [...BANK,...history].filter(q=>(!node||(q.primary_node===node||q.tags.knowledge.includes(node)))&&(!level||(level==='pending'?q.difficulty==null:String(q.difficulty)===level))&&(!ready||(ready==='ready'?bankCanCompose(q):q.readiness===ready))&&(!source||q.source.paper_id===source||q.source.source_file===source)&&(!word||[q.id,q.legacy_id,...(q.id_aliases||[]),q.statement,q.title,...q.tags.knowledge.map(id=>N[id]?.name||id),...q.tags.topic,...q.tags.method].join(' ').toLowerCase().includes(word)))}
+function bankFiltered(){const word=$('#bankSearch').value.trim().toLowerCase(),node=$('#bankNode').value,level=$('#bankLevel').value,ready=$('#bankReady').value,source=$('#bankPaper').value;const history=word?BANK_HISTORY.filter(q=>q.id.toLowerCase()===word):[];return [...BANK,...history].filter(q=>(!node||(q.primary_node===node||q.tags.knowledge.includes(node)))&&(!level||(level==='pending'?q.difficulty==null:String(q.difficulty)===level))&&(!ready||(ready==='ready'?bankCanCompose(q):q.readiness===ready))&&bankMatchesSource(q,source)&&(!word||[q.id,q.legacy_id,...(q.id_aliases||[]),q.statement,q.title,...bankSourceSearchTerms(q),...q.tags.knowledge.map(id=>N[id]?.name||id),...q.tags.topic,...q.tags.method].join(' ').toLowerCase().includes(word)))}
 function renderBank(){
  const qs=bankFiltered(),ready=BANK.filter(bankCanCompose).length;
  const pageCount=Math.max(1,Math.ceil(qs.length/BANK_PAGE_SIZE)); bankPage=Math.min(bankPage,pageCount);
@@ -170,7 +219,7 @@ function downloadTraining(){const data=JSON.stringify(trainingStore,null,2),url=
 $('#exportTraining').onclick=downloadTraining;
 $('#importTraining').onchange=async e=>{try{const file=e.target.files[0];if(!file)return;if(file.size>5000000)throw Error('备份文件超过5MB');const incoming=JSON.parse(await file.text());validateTrainingBackup(incoming);let added=0,conflicts=0;for(const t of incoming.sessions){const existing=trainingStore.sessions.find(x=>x.id===t.id);if(existing){if(JSON.stringify(existing)!==JSON.stringify(t))conflicts++;continue}if(t.status==='planned'&&!t.published_at)t.status='draft';trainingStore.sessions.push(t);added++}saveTrainings();syncLocalPractice();renderTrainings();$('#trainingNotice').textContent=`已导入${added}份；${conflicts}份同编号内容不同，保留本机记录未覆盖。`}catch(err){$('#trainingNotice').textContent='未导入：'+err.message}finally{e.target.value=''}};
 $('#bankNode').innerHTML+=C.nodes.filter(n=>BANK.some(q=>q.primary_node===n.id)).map(n=>`<option value="${n.id}">${esc(n.name)}</option>`).join('');const statusLabels={ready:'可组题',needs_review:'待核对',draft:'草稿',suppressed:'已抑制',duplicate_suppressed:'重复抑制',excluded:'已排除'};$('#bankReady').innerHTML='<option value="">全部状态</option>'+[...new Set(BANK.map(q=>q.readiness).filter(Boolean))].sort().map(s=>`<option value="${esc(s)}">${esc(statusLabels[s]||s)}</option>`).join('');// 题库来源筛选只列出题库中实际存在的来源；考试原卷属于原始数据，不生成空筛选项。
-const sourcePairs=[...BANK.map(q=>{const s=q.source||{};if(s.kind==='exam_scan'||s.paper_id){const paper=(D.papers||[]).find(p=>p.paper_id===s.paper_id);return {value:s.paper_id,label:s.title||(paper&&paper.title)||s.source_file||s.paper_id,group:'试卷'}}if(!s.source_file)return null;const group=/奥数精讲|奥精/.test(s.source_file)?'奥精':/资优生|市北初级中学/.test(s.source_file)?'资优生':/尖子生夺冠|尖子生/.test(s.source_file)?'尖子生':'其他书籍';return {value:s.source_file,label:s.source_file,group}}).filter(Boolean)];const sourceMap=new Map(sourcePairs.map(x=>[x.value,x]));const grouped={};for(const x of sourceMap.values())(grouped[x.group]??=[]).push(x);$('#bankPaper').innerHTML='<option value="">全部来源</option>'+['试卷','资优生','奥精','尖子生','其他书籍'].filter(g=>grouped[g]?.length).map(g=>`<optgroup label="${g}">${grouped[g].sort((a,b)=>a.label.localeCompare(b.label,'zh-CN')).map(x=>`<option value="${esc(x.value)}">${esc(x.label)}</option>`).join('')}</optgroup>`).join('');$('#bankPaper').setAttribute('aria-label','全部来源');
+$('#bankPaper').innerHTML=bankSourceOptions(BANK);$('#bankPaper').setAttribute('aria-label','全部来源');
 for(const id of ['bankNode','bankLevel','bankReady','bankPaper'])$('#'+id).onchange=()=>{bankPage=1;renderBank()};$('#bankSearch').oninput=()=>{bankPage=1;renderBank()};
 $('#newTraining').onclick=()=>openComposer();$('#trainingStatus').onchange=renderTrainings;$('#composeSelected').onclick=()=>{const pending=pendingComposer;pendingComposer=null;if(pending)openComposer(pending.prefill.criteria.node,[...chosenBank],pending.editId,pending.prefill);else openComposer('',[...chosenBank]);renderBank()};$('#clearBankSelection').onclick=()=>{chosenBank.clear();renderBank()};
 document.addEventListener('change',e=>{const id=e.target.dataset.bankSelect;if(id){const q=B[id];if(!bankCanCompose(q)){e.target.checked=false;chosenBank.delete(id)}else if(e.target.checked)chosenBank.add(q.id);else chosenBank.delete(q.id);renderBank()}});

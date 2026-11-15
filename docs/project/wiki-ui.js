@@ -29,6 +29,41 @@ orgView=function(){const active=['小欧','小欧2号','小磊','小磊二号'];
 // Poll only operational pages; leave long-form documentation and forms undisturbed.
 const liveViews=new Set(['overview','library','work','todos']);
 scheduleRefresh=function(){if(refreshTimer)clearInterval(refreshTimer);refreshTimer=document.hidden?null:setInterval(()=>{if(liveViews.has(view)&&!document.querySelector('dialog[open]')&&!['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))load()},30000)};
-load=async function(){try{const docs=['org','playbook'].includes(view);const nextState=window.CONTROL_CENTER_STATE||await api(readOnly?'./state.json':'/api/state');state=nextState;if(!docs&&!readOnly){try{operationsData=await api('/api/operations');opsError=''}catch(e){opsError='工作线证据暂不可读取：'+e.message}}if(view==='library'){pipelineRuntime=await api(readOnly?'./library-facts.json':'/api/library-facts')}if(view==='releases'){try{versionProgress=await api(readOnly?'./version-progress.json':'/api/version-progress')}catch{}}$('#connection').textContent=readOnly?'只读快照':'已连接';$('#connection').className='dot ok';$('#lastSync').textContent='记录 '+opsDate(state.meta.updated_at);$('#environment').textContent=readOnly?'公开发布快照':state.meta.environment+' · '+state.meta.release_state;if(!document.querySelector('dialog[open]'))render();const hint=$('.ops-sync-hint');if(hint)hint.textContent=docs?'本地WIKI · 按需读取 · 不定时刷新':liveViews.has(view)?'工作数据 · 每30秒读取最新证据 · 不把聊天状态当成果':'记录页面 · 按需读取，点击刷新可更新';}catch(e){$('#connection').textContent='读取失败';$('#lastSync').textContent=e.message}};
-opsGoto=function(v){view=v;$$('nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===v));render();if(['library','releases'].includes(v)){if(v==='library'&&!pipelineRuntime?.course_progress)$('#content').insertAdjacentHTML('afterbegin','<p class="ops-warning" role="status">正在加载实际DEV题量和QA报告，请稍候…</p>');load();}const hint=$('.ops-sync-hint');if(hint)hint.textContent=['org','playbook'].includes(v)?'本地WIKI · 按需读取 · 不定时刷新':liveViews.has(v)?'工作数据 · 每30秒读取最新证据':'记录页面 · 按需读取';};
+let controlLoadPromise=null,controlLoadView=null;
+const controlLoadWarnings=new Map();
+function controlPaint(){
+ if(!state||document.querySelector('dialog[open]')||['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName))return;
+ render();
+ if(controlLoadWarnings.size){const warning=document.createElement('p');warning.className='ops-warning';warning.setAttribute('role','alert');warning.textContent=[...controlLoadWarnings.values()].join('；')+' 点击刷新重试。';$('#content').prepend(warning)}
+}
+async function controlLoadOnce(target){
+ controlLoadWarnings.clear();
+ try{
+  state=window.CONTROL_CENTER_STATE||await api(readOnly?'./state.json':'/api/state');
+  $('#connection').textContent=readOnly?'只读快照':'已连接';$('#connection').className='dot ok';
+  $('#lastSync').textContent='记录 '+opsDate(state.meta.updated_at)+' · 正在读取页面数据…';
+  $('#stage').textContent=state.overview.current_stage;
+  $('#environment').textContent=readOnly?'公开发布快照':state.meta.environment+' · '+state.meta.release_state;
+  controlPaint();
+  const jobs=[];
+  function optional(name,path,accept){jobs.push((async()=>{try{accept(await api(path))}catch(e){controlLoadWarnings.set(name,name+'读取失败：'+e.message);if(name==='工作线证据')opsError=controlLoadWarnings.get(name)}controlPaint()})())}
+  if(!['org','playbook'].includes(target)&&!readOnly)optional('工作线证据','/api/operations',data=>{operationsData=data;opsError=''});
+  if(target==='library')optional('课程进度',readOnly?'./library-facts.json':'/api/library-facts',data=>{pipelineRuntime=data});
+  if(target==='releases')optional('版本记录',readOnly?'./version-progress.json':'/api/version-progress',data=>{versionProgress=data});
+  await Promise.all(jobs);
+  $('#connection').textContent=controlLoadWarnings.size?'已连接 · 部分读取失败':readOnly?'只读快照':'已连接';
+  $('#lastSync').textContent='记录 '+opsDate(state.meta.updated_at)+(controlLoadWarnings.size?' · 点击刷新重试':' · 已刷新');
+  if(requestedDecisionTask&&!requestedDecisionOpened){const task=state.tasks.find(t=>t.id===requestedDecisionTask);if(task){requestedDecisionOpened=true;view='work';controlPaint();openTask(task)}}
+ }catch(e){
+  $('#connection').textContent='读取失败';$('#connection').className='dot';
+  $('#lastSync').textContent=e.message+' 点击刷新重试。';
+  if(!state)$('#content').textContent='暂时无法读取管理台记录。请点击右上角刷新重试。';
+ }
+}
+load=function(){
+ if(controlLoadPromise)return controlLoadPromise;
+ controlLoadPromise=(async()=>{do{controlLoadView=view;await controlLoadOnce(controlLoadView)}while(controlLoadView!==view)})().finally(()=>{controlLoadPromise=null});
+ return controlLoadPromise;
+};
+opsGoto=function(v){view=v;$$('nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===v));controlPaint();if(['library','releases'].includes(v)||!state){if(v==='library'&&!pipelineRuntime?.course_progress)$('#content').insertAdjacentHTML('afterbegin','<p class="ops-warning" role="status">正在加载实际DEV题量和QA报告，请稍候…</p>');load();}const hint=$('.ops-sync-hint');if(hint)hint.textContent=['org','playbook'].includes(v)?'本地WIKI · 按需读取 · 不定时刷新':liveViews.has(v)?'工作数据 · 每30秒读取最新证据':'记录页面 · 按需读取';};
 $('#refresh').onclick=()=>load();scheduleRefresh();load();

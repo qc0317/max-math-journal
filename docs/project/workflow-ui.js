@@ -69,7 +69,7 @@ const previousOverview=overviewView;overviewView=function(){return versionProgre
 const previousLibrary=libraryView;libraryView=function(){return previousLibrary()+'<details class="panel" style="margin-top:16px"><summary>六年级历史QA版本进程</summary>'+versionProgressView()+'</details>'};
 const releaseArchive=releaseView;releaseView=function(){return versionProgressView()+'<div style="margin-top:16px">'+releaseArchive()+'</div>'};
 $$('nav button').forEach(b=>{b.textContent=viewLabels[b.dataset.view]||b.textContent});
-load();scheduleRefresh();
+// Bootstrap is owned by wiki-ui after all view and loader overrides are installed.
 
 // Decisions use a dedicated form and immutable submission history.
 const decisionBox=document.createElement('section');decisionBox.id='decisionBox';decisionBox.hidden=true;
