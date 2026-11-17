@@ -1,6 +1,5 @@
 {
-  "version": "v2.6.0",
-  "release": "2026-11-15-v2.6.0-1fa620db43e0",
+  "release": "2026-11-18-v2.7.0-0a4837464e15",
   "public_files": [
     ".nojekyll",
     "assets/branding/Logo_lite01.png",
@@ -41,6 +40,7 @@
     "visual-baseline/bank-training.js",
     "visual-baseline/charts.js",
     "visual-baseline/force-tree.js",
+    "visual-baseline/paper-math.js",
     "visual-baseline/training-print.js",
     "visual-baseline/vendor/D3-LICENSE.txt",
     "visual-baseline/vendor/d3.v7.9.0.min.js",

@@ -1,7 +1,7 @@
 /* A4 student copy. Uses saved problem snapshots; never reads responses or solutions. */
 let paperTraining=null,paperReturnFocus=null,paperOldTitle='',paperInert=[];
 const paperImageCache=new Map();
-function paperFigurePaths(q){return [...new Set([q.figure_asset,...(q.figure_assets||[])].filter(v=>typeof v==='string'&&v.startsWith('assets/')&&!v.split('/').includes('..')))];}
+function paperFigurePaths(q){return [...new Set([q.figure_asset,...(q.figure_assets||[])].map(v=>typeof v==='string'?v:v?.path).filter(v=>typeof v==='string'&&v.startsWith('assets/')&&!v.split('/').includes('..')))];}
 async function paperLoadFigures(training){await Promise.all(training.question_ids.flatMap(id=>paperFigurePaths(training.question_snapshots?.[id]||B[id]||{})).map(async path=>{if(paperImageCache.has(path))return;const im=new Image();im.src=encodeURI(path);await im.decode();paperImageCache.set(path,im);}));}
 function paperFigure(path){const fig=paperElement('figure','paper-original-figure'),im=paperImageCache.get(path)?.cloneNode(true);if(!im)throw Error('题图尚未载入');im.alt='题目配图';im.style.cssText='display:block;max-width:100%;max-height:60mm;width:auto;height:auto;object-fit:contain';fig.style.cssText='margin:4mm 0;break-inside:avoid';fig.append(im);return fig;}
 const paperMode=document.createElement('div');
@@ -22,6 +22,14 @@ function paperBlock(number,text,continued=false,answerHeight=0){
  return box;
 }
 function paperFits(body){return body.scrollHeight<=body.clientHeight+1}
+// Page boundaries must not split an explicit formula or a base/exponent pair.
+function paperMathUnits(chars){
+ const text=chars.join(''),units=[],patterns=[/\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]/g,/(?:\([^()\n]*\)|[a-zA-Z0-9α-ωΑ-Ω]+)(?:(?:\^|_)(?:\{[^{}]*\}|[−-]?\d+|[a-zA-Z])|[⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻ⁿⁱ])+/g];
+ for(const re of patterns)for(const m of text.matchAll(re))units.push([Array.from(text.slice(0,m.index)).length,Array.from(text.slice(0,m.index+m[0].length)).length]);
+ return units;
+}
+function paperSafePrefix(chars,count){for(const [start,end]of paperMathUnits(chars))if(count>start&&count<end)count=start;return count;}
+
 function renderPaperPages(){
  if(!paperTraining)return;const pages=document.querySelector('#paperPages');pages.replaceChildren();const spacing=Number(document.querySelector('#paperSpacing').value);let body=paperNewPage(true);
  paperTraining.question_ids.forEach((id,index)=>{
@@ -34,8 +42,10 @@ function renderPaperPages(){
    if(paperFits(body)){last=candidate;rest=[];break;}
    const box=candidate.querySelector('.paper-question-text');let lo=1,hi=rest.length,best=0;
    while(lo<=hi){const mid=Math.floor((lo+hi)/2);box.innerHTML=bankMathText(rest.slice(0,mid).join(''));if(paperFits(body)){best=mid;lo=mid+1}else hi=mid-1;}
-   if(!best){candidate.remove();if(body.children.length){body=paperNewPage(false);continue;}throw Error('当前题目无法排入A4页面，请检查单行内容。');}
-   const prefix=rest.slice(0,best).join(''),paragraph=prefix.lastIndexOf('\n');if(paragraph>prefix.length*.65)best=Array.from(prefix.slice(0,paragraph+1)).length;
+   best=paperSafePrefix(rest,best);
+   if(!best){const unit=paperMathUnits(rest).find(([start])=>start===0);if(unit){box.innerHTML=bankMathText(rest.slice(0,unit[1]).join(''));if(paperFits(body))best=unit[1];}}
+   if(!best){candidate.remove();if(body.children.length){body=paperNewPage(false);continue;}throw Error('当前公式或题目无法完整排入A4页面，请按数学单元分行。');}
+   const prefix=rest.slice(0,best).join(''),paragraph=prefix.lastIndexOf('\n');if(paragraph>prefix.length*.65){const boundary=paperSafePrefix(rest,Array.from(prefix.slice(0,paragraph+1)).length);if(boundary)best=boundary;}
    box.innerHTML=bankMathText(rest.slice(0,best).join(''));rest=rest.slice(best);continued=true;body=paperNewPage(false);
   }
   if(!last){last=paperBlock(index+1,'',true,0);body.append(last);}

@@ -1,29 +1,55 @@
 // Safe native MathML for the formula notation used in the source books.
+
 function bankMathText(value){
+
  // Explicit pipe tables are rendered from escaped cells; ordinary text stays literal.
+
  const tableLines=String(value??'').split(/\r?\n/);
+
  const tableCells=line=>/^\s*\|.*\|\s*$/.test(line)?line.trim().slice(1,-1).split(/(?<!\\)\|/).map(c=>c.trim().replace(/\\\|/g,'|')):null;
+
  const tableStart=at=>{const h=tableCells(tableLines[at]||''),d=tableCells(tableLines[at+1]||'');return h&&d&&h.length===d.length&&d.every(c=>/^:?-{3,}:?$/.test(c))?h:null;};
+
  if(tableLines.some((_,at)=>tableStart(at))){
+
   let rendered='',plain=[];
+
   const flush=()=>{if(plain.length){rendered+=bankMathText(plain.join('\n'));plain=[];}};
+
   for(let at=0;at<tableLines.length;){const header=tableStart(at);if(!header){plain.push(tableLines[at++]);continue;}flush();
+
    const cellStyle='border:1px solid #bbb;padding:6px 8px;white-space:normal;overflow-wrap:anywhere;text-align:center';
+
    rendered+='<div class="bank-math-table-wrap" style="max-width:100%;overflow-x:auto;margin:10px 0"><table class="bank-math-table" style="width:100%;border-collapse:collapse;font-size:inherit;break-inside:avoid"><thead><tr>'+header.map(c=>'<th scope="col" style="'+cellStyle+'">'+bankMathText(c)+'</th>').join('')+'</tr></thead><tbody>';at+=2;
+
    for(;at<tableLines.length;at++){const row=tableCells(tableLines[at]);if(!row||row.length!==header.length)break;rendered+='<tr>'+row.map(c=>'<td style="'+cellStyle+'">'+bankMathText(c)+'</td>').join('')+'</tr>';}
+
    rendered+='</tbody></table></div>';
+
   }flush();return rendered;
+
  }
 
+
+
  const superscripts={'⁰':'0','¹':'1','²':'2','³':'3','⁴':'4','⁵':'5','⁶':'6','⁷':'7','⁸':'8','⁹':'9','⁺':'+','⁻':'−','⁼':'=','⁽':'(','⁾':')','ⁿ':'n','ⁱ':'i'};
+
  const input=String(value??'').replace(/\^\\circ/g,'°').replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿⁱ]+/g,s=>'^{'+[...s].map(c=>superscripts[c]).join('')+'}');
+
  const wrap=body=>`<math xmlns="http://www.w3.org/1998/Math/MathML" style="font-size:1.15em;vertical-align:middle"><mrow>${body}</mrow></math>`;
+
  function group(s,p){if(s[p]!=='{')return null;let depth=1;for(let j=p+1;j<s.length;j++){if(s[j]==='{')depth++;if(s[j]==='}'&&!--depth)return{body:s.slice(p+1,j),end:j+1};}return null;}
+
  function argument(s,p){while(p<s.length&&/\s/.test(s[p]))p++;if(p>=s.length)return null;const g=group(s,p);if(g)return{html:math(g.body),body:g.body,end:g.end};if(s[p]==='\\'){const c=command(s,p);if(c)return c;}return{html:math(s[p]),body:s[p],end:p+1};}
+
  const symbols={pi:'π',times:'×',div:'÷',cdot:'·',pm:'±',le:'≤',leq:'≤',ge:'≥',geq:'≥',ne:'≠',neq:'≠',infty:'∞',ldots:'…',cdots:'⋯',triangle:'△',angle:'∠',circ:'°',cong:'≌',perp:'⊥',parallel:'∥',Rightarrow:'⇒',mapsto:'↦',in:'∈',to:'→'};
+
  function command(s,p){
+
   const m=/^\\([a-zA-Z]+)/.exec(s.slice(p));if(!m)return null;const name=m[1];let at=p+m[0].length;
+
   if(symbols[name])return{html:`<mo>${esc(symbols[name])}</mo>`,end:at};
+
   if(name==='begin'){
    const env=group(s,at);if(!env||env.body!=='vmatrix')return null;
    const closer='\\end{vmatrix}',stop=s.indexOf(closer,env.end);if(stop<0)return null;
@@ -35,35 +61,65 @@ function bankMathText(value){
   }
   if(name==='substack'){const a=group(s,at);if(!a)return null;const rows=[];let level=0,start=0;for(let j=0;j<a.body.length;j++){if(a.body[j]==='{')level++;if(a.body[j]==='}')level--;if(level===0&&a.body.startsWith(String.fromCharCode(92)+'cr ',j)){rows.push(a.body.slice(start,j));start=j+4;j+=3;}}rows.push(a.body.slice(start));if(!rows.length||rows.length>20)return null;return{html:'<mtable displaystyle="false" columnalign="left" rowspacing="0.25em">'+rows.map(row=>'<mtr><mtd style="padding:0"><mrow>'+math(row)+'</mrow></mtd></mtr>').join('')+'</mtable>',end:a.end};}
   if(name==='left'||name==='right')return{html:'',end:at};
+
   if(name==='quad'||name==='qquad')return{html:`<mspace width="${name==='quad'?1:2}em"/>`,end:at};
+
   if(name==='frac'||name==='tfrac'||name==='dfrac'){const a=argument(s,at);if(!a)return null;const b=argument(s,a.end);if(!b)return null;return{html:`<mfrac><mrow>${a.html}</mrow><mrow>${b.html}</mrow></mfrac>`,end:b.end};}
+
   if(name==='sqrt'){let index=null;if(s[at]==='['){const end=s.indexOf(']',at+1);if(end<0)return null;index=s.slice(at+1,end);at=end+1;}const a=argument(s,at);if(!a)return null;return{html:index===null?`<msqrt><mrow>${a.html}</mrow></msqrt>`:`<mroot><mrow>${a.html}</mrow><mrow>${math(index)}</mrow></mroot>`,end:a.end};}
+
   if(name==='mathrm'||name==='text'){const a=group(s,at);if(!a)return null;return{html:`<mtext>${esc(a.body)}</mtext>`,end:a.end};}
+
   if(name==='underbrace'){const a=group(s,at);if(!a)return null;let end=a.end,label=null;while(/\s/.test(s[end]||''))end++;if(s[end]==='_'){const b=group(s,end+1);if(!b)return null;label=math(b.body);end=b.end;}const brace=`<munder accentunder="true"><mrow>${math(a.body)}</mrow><mo stretchy="true">⏟</mo></munder>`;return{html:label===null?brace:`<munder><mrow>${brace}</mrow><mrow>${label}</mrow></munder>`,end};}
+
   if(name==='vec'||name==='overrightarrow'){const a=argument(s,at);if(!a)return null;return{html:`<mover accent="true"><mrow>${a.html}</mrow><mo stretchy="true">→</mo></mover>`,end:a.end};}
+
   if(name==='overline'||name==='bar'){const a=group(s,at);if(!a)return null;return{html:`<mover accent="true" style="border-top:0.06em solid currentColor;padding-top:0.08em"><mrow>${math(a.body)}</mrow><mo style="display:none">¯</mo></mover>`,end:a.end};}
+
   if(name==='dot'||name==='underline'){const a=group(s,at);if(!a)return null;const tag=name==='underline'?'munder':'mover';return{html:`<${tag} accent="true"><mrow>${math(a.body)}</mrow><mo>${name==='dot'?'˙':name==='underline'?'_':'¯'}</mo></${tag}>`,end:a.end};}
+
   return null;
+
  }
+
  function math(s){let parts=[],i=0;while(i<s.length){if(s[i]==='\\'){const c=command(s,i);if(c){parts.push(c.html);i=c.end;continue;}}
+
    if((s[i]==='^'||s[i]==='_')&&parts.length){const sub=s[i]==='_';const g=group(s,i+1);let body,end;if(g){body=g.body;end=g.end;}else{const m=/^[−-]?\d+|^[a-zA-Z]/.exec(s.slice(i+1));if(!m){parts.push(`<mo>${esc(s[i++])}</mo>`);continue;}body=m[0];end=i+1+body.length;}const base=parts.pop();parts.push(`<${sub?'msub':'msup'}>${base}<mrow>${math(body)}</mrow></${sub?'msub':'msup'}>`);i=end;continue;}
+
    const number=/^\d+(?:\.\d+)?/.exec(s.slice(i));if(number){parts.push(`<mn>${number[0]}</mn>`);i+=number[0].length;continue;}const ch=s[i++];parts.push(/[a-zA-Zπ]/.test(ch)?`<mi>${esc(ch)}</mi>`:/\s/.test(ch)?'<mspace width="0.12em"/>':`<mo>${esc(ch)}</mo>`);
+
   }return parts.join('');}
+
  const fractions={'½':['1','2'],'⅓':['1','3'],'⅔':['2','3'],'¼':['1','4'],'¾':['3','4'],'⅕':['1','5'],'⅖':['2','5'],'⅗':['3','5'],'⅘':['4','5'],'⅙':['1','6'],'⅚':['5','6'],'⅛':['1','8'],'⅜':['3','8'],'⅝':['5','8'],'⅞':['7','8']};
+
  let out='',i=0;while(i<input.length){if(input.startsWith('\\(',i)||input.startsWith('\\[',i)){const closer=input[i+1]==='('? '\\)':'\\]';const end=input.indexOf(closer,i+2);if(end>=0){out+=wrap(math(input.slice(i+2,end)));i=end+2;continue;}}
+
   if(input[i]==='\\'){const c=command(input,i);if(c){out+=wrap(c.html);i=c.end;continue;}}
+
   if(fractions[input[i]]){const[n,d]=fractions[input[i++]];out+=wrap(`<mfrac><mn>${n}</mn><mn>${d}</mn></mfrac>`);continue;}
+
   if(input[i]==='^'||input[i]==='_'){const sub=input[i]==='_';const g=group(input,i+1);const m=g?null:/^[−-]?\d+|^[a-zA-Z]/.exec(input.slice(i+1));if(g||m){const body=g?g.body:m[0];out+=`<${sub?'sub':'sup'}>${wrap(math(body))}</${sub?'sub':'sup'}>`;i=g?g.end:i+1+m[0].length;continue;}}
+
   out+=esc(input[i++]);
+
  }return out;
+
 }
 
+
+
 /* Local prototype. Question definitions, sessions and attempts remain separate. */
+
 // Page-level OCR aggregates stay in the source inventory for traceability,
+
 // but are not questions and must not appear in browsing or composition.
+
 const REVIEW_VISIBLE_IDS=new Set(['TAL7B0030052','TAL7B0030160','TAL7B0030163','TAL7B0030164','TAL7B0030165']);
+
 // Historical IDs remain directly searchable; review visibility never grants composition eligibility.
+
 function bankIsExcluded(q){return !!(q&&(q.duplicate_suppressed||q.non_question_source||['suppressed','duplicate_suppressed','excluded'].includes(q.readiness)));}
+
 function bankCanCompose(q){return !!q&&!bankIsExcluded(q)&&q.readiness==='ready';}
 // New source metadata is opt-in; legacy source labels and exact-file filters are preserved.
 const ZZPY_SOURCE_SERIES='自主招生培优讲义';
@@ -114,127 +170,248 @@ function bankSourceOptions(rows){
  return html+legacy(['其他书籍']);
 }
 // End opt-in source metadata helpers.
+
 const BANK_ALL=[...(D.question_bank.questions||[]),...((D.question_bank_staging&&D.question_bank_staging.questions)||[]),...(D.question_bank_review||[])];
+
 const BANK_HISTORY=BANK_ALL.filter(q=>(REVIEW_VISIBLE_IDS.has(q.id)||q.split_into?.length)&&bankIsExcluded(q));
+
 const BANK=BANK_ALL.filter(q=>!bankIsExcluded(q)), B=Object.fromEntries([...(D.question_bank_staging?.retired_history||[]),...BANK_HISTORY,...BANK].map(q=>[q.id,q])), chosenBank=new Set();
+
 // Preserve saved training references when a question adopts its registered stable ID.
+
 for(const q of BANK)for(const alias of q.id_aliases||[]){if(B[alias]&&B[alias]!==q)throw Error('题目旧编号映射冲突');B[alias]=q;}
+
 let bankPage=1;
+
 function bankTargetPage(value,total,current){const text=String(value).trim();if(!/^\d+$/.test(text))return current;const n=Number(text);return Number.isSafeInteger(n)?Math.max(1,Math.min(total,n)):current;}
+
 function editBankPage(){const info=$('#bankPageInfo');if(info.querySelector('input'))return;const total=Math.max(1,Math.ceil(bankFiltered().length/BANK_PAGE_SIZE)),current=bankPage;const input=document.createElement('input');input.type='number';input.min='1';input.max=String(total);input.step='1';input.value=String(current);input.setAttribute('aria-label',`目标页码，1到${total}`);input.style.width='64px';info.replaceChildren(input);let done=false;const finish=cancel=>{if(done)return;done=true;if(!cancel)bankPage=bankTargetPage(input.value,total,current);renderBank()};input.onkeydown=e=>{if(e.key==='Enter'||e.key==='Escape'){e.preventDefault();finish(e.key==='Escape')}};input.onblur=()=>finish(false);input.focus();input.select();}
+
 const BANK_PAGE_SIZE=50;
+
 const bankStyle=document.createElement('style');bankStyle.textContent='.bank-state.warning{color:#b36b00;font-weight:600}.bank-state.danger{color:#c43d3d;font-weight:700}.bank-pagination{display:flex;align-items:center;justify-content:center;gap:14px;margin:14px 0;font-size:11px;color:#777}.bank-pagination button{border:1px solid #ddd;background:#fff;border-radius:3px;padding:5px 12px;color:#555;cursor:pointer}.bank-pagination button:disabled{opacity:.35;cursor:default}';document.head.append(bankStyle);
+
 const trainingDemo=new URLSearchParams(window.parent.location.search).get('demo')==='1';
+
 const initialBankSearch=new URLSearchParams(window.parent.location.search).get('bankSearch')||'';
+
 const bankNodeName=q=>(q&&q.primary_node&&N[q.primary_node]?.name)||q?.tags?.knowledge?.[0]||'待分类';
+
 const TRAINING_KEY=trainingDemo?'shiji.training.demo.v1':'shiji.training.v1';
+
 if(trainingDemo)document.querySelector('.draft-notice').textContent='流程演示 · 独立保存示例，不计入实际学习统计。';
+
 let trainingStore={version:1,sessions:[]},storageAvailable=true,runnerId=null,composeIds=[],composeSessionId=null,composeSourceId=null,composeOverrides={},pendingComposer=null;
+
 const trainingVault=window.parent!==window?window.parent.mathTrainingVault:null;
+
 try{const v=trainingVault?structuredClone(trainingVault.initial):JSON.parse(localStorage.getItem(TRAINING_KEY)||'null');if(v){validateTrainingBackup(v);trainingStore=v}}catch(e){storageAvailable=false;$('#trainingNotice').textContent='未能读取浏览器草稿。请使用导出备份；原考试记录未受影响。'}
+
 if(!trainingDemo&&D.training_sessions){try{validateTrainingBackup(D.training_sessions);for(const t of D.training_sessions.sessions)if(!trainingStore.sessions.some(x=>x.id===t.id))trainingStore.sessions.push(structuredClone(t))}catch{$('#trainingNotice').textContent='发布备份格式不正确，已保留本机练习。'}}
+
 for(const t of trainingStore.sessions){if(t.status==='planned'&&!t.published_at){t.status='draft';t.migrated_from_legacy=true}}
+
 const difficultyName=q=>({1:'基础',2:'进阶',3:'挑战'}[q.difficulty]||'待评定');
+
 function validateTrainingBackup(v){
+
  if(!v||v.version!==1||!Array.isArray(v.sessions))throw Error('备份格式不正确');
+
  const ids=new Set();
+
  for(const t of v.sessions){
+
   if(typeof t.id!=='string'||ids.has(t.id)||typeof t.title!=='string'||!['draft','planned','active','completed'].includes(t.status)||!Array.isArray(t.question_ids)||!t.question_ids.length||new Set(t.question_ids).size!==t.question_ids.length||t.question_ids.some(id=>!B[id]||(!B[id].archived_removed_by_user&&!bankCanCompose(B[id])&&!(['active','completed'].includes(t.status)&&!!t.question_snapshots?.[id]))))throw Error('训练包含重复、未知或待核对题目');
+
   if(!Number.isFinite(t.minutes)||t.minutes<1||t.minutes>300||!t.responses||typeof t.responses!=='object')throw Error('训练设置不完整');
+
   for(const [id,a] of Object.entries(t.responses)){if(!t.question_ids.includes(id)||!a||typeof a.answer!=='string'||a.answer.length>20000||!['','correct','partial','wrong','blank'].includes(a.verdict)||typeof a.independent!=='boolean'||typeof a.hint!=='boolean')throw Error('作答格式不正确')}
+
   if(t.question_snapshots)for(const [id,q] of Object.entries(t.question_snapshots)){if(!t.question_ids.includes(id)||q.id!==id||q.primary_node!==B[id].primary_node||!['title','statement','answer','solution'].every(k=>typeof q[k]==='string')||q.statement.length>50000)throw Error('题目版本快照不正确')}
+
   if(t.status==='completed'&&t.question_ids.some(id=>!t.responses[id]?.verdict))throw Error('已完成训练缺少核对结果');
+
   ids.add(t.id);
+
  }
+
 }
+
 function saveTrainings(){if(trainingVault){trainingVault.save(trainingStore).then(()=>{storageAvailable=true}).catch(()=>{storageAvailable=false;$('#trainingNotice').textContent='本机加密备份未能保存，请导出训练记录。'});return true}try{localStorage.setItem(TRAINING_KEY,JSON.stringify(trainingStore));storageAvailable=true;return true}catch{storageAvailable=false;$('#trainingNotice').textContent='浏览器未能保存，请立即导出备份；本次页面中的记录仍保留。';return false}}
+
 function bankFiltered(){const word=$('#bankSearch').value.trim().toLowerCase(),node=$('#bankNode').value,level=$('#bankLevel').value,ready=$('#bankReady').value,source=$('#bankPaper').value;const history=word?BANK_HISTORY.filter(q=>q.id.toLowerCase()===word):[];return [...BANK,...history].filter(q=>(!node||(q.primary_node===node||q.tags.knowledge.includes(node)))&&(!level||(level==='pending'?q.difficulty==null:String(q.difficulty)===level))&&(!ready||(ready==='ready'?bankCanCompose(q):q.readiness===ready))&&bankMatchesSource(q,source)&&(!word||[q.id,q.legacy_id,...(q.id_aliases||[]),q.statement,q.title,...bankSourceSearchTerms(q),...q.tags.knowledge.map(id=>N[id]?.name||id),...q.tags.topic,...q.tags.method].join(' ').toLowerCase().includes(word)))}
+
 function renderBank(){
+
  const qs=bankFiltered(),ready=BANK.filter(bankCanCompose).length;
+
  const pageCount=Math.max(1,Math.ceil(qs.length/BANK_PAGE_SIZE)); bankPage=Math.min(bankPage,pageCount);
+
  const pageQs=qs.slice((bankPage-1)*BANK_PAGE_SIZE,bankPage*BANK_PAGE_SIZE);
+
  const staged=(D.question_bank_staging&&D.question_bank_staging.questions)||[];
+
  const candidates=window.parent.visualBridge.bankStats.candidates;
- $('#bankOverview').textContent=`共 ${BANK.length} 条记录 · 可组题 ${ready} 道 · A级候选 ${candidates} 条 · 待核对记录含原始识别片段`;
+
+ $('#bankOverview').textContent=`共 ${BANK.length} 道 · 可组题 ${ready} 道 · 暂不可组题 ${BANK.length-ready} 道`;
+
  $('#bankResult').textContent=`显示 ${qs.length} 道 · 已选 ${chosenBank.size} 道`;
+
  $('#composeSelected').textContent=pendingComposer?`返回练习编辑（${chosenBank.size}）`:`用已选题组练习（${chosenBank.size}）`;$('#composeSelected').disabled=!chosenBank.size;
- $('#bankRows').innerHTML=pageQs.map(q=>{const source=q.source||{}, topic=[...(q.tags?.topic||[])].filter(t=>t!==source.title&&!/^快乐星期五|^goal\.|^待审原卷题$/.test(t)); const nodeName=q.primary_node&&N[q.primary_node]?N[q.primary_node].name:''; const display=(source.kind==='exam'||source.paper_id)?(q.statement||q.title||'未命名题目'):(q.statement||q.title||'未命名题目'); const review=q.auto_review||{}; const status=bankIsExcluded(q)?'已抑制 · 仅供查阅':q.verification_status==='verified'?'已校验':bankCanCompose(q)?'可组题':q.readiness==='draft'?'草稿':review.answer_check==='mismatch'?'不一致':review.status==='C'?'无法核对':'待人工复核'; const tone=bankCanCompose(q)?'ready':status==='不一致'?'danger':'warning'; return `<tr><td><input type="checkbox" data-bank-select="${q.id}" aria-label="选择${q.id}" ${chosenBank.has(q.id)?'checked':''} ${bankCanCompose(q)?'':'disabled'}></td><td><button class="bank-id" data-bank-open="${q.id}">${q.id}</button><small>${esc(source.title||P[source.paper_id]?.title||source.source_file||'候选题')}</small></td><td><button class="bank-title" data-bank-open="${q.id}">${bankMathText(display)}</button><div class="bank-tags">${[...new Set([nodeName,...topic].filter(Boolean))].map(t=>`<span>${esc(t)}</span>`).join('')}</div></td><td>${difficultyName(q)}</td><td><span class="bank-state ${tone}">${status}</span>${q.duplicate_candidates?.length?'<small>摘要同名 · 待比对</small>':''}</td></tr>`}).join('')||'<tr><td colspan="5" class="empty">没有符合条件的题目</td></tr>';
+
+ $('#bankRows').innerHTML=pageQs.map(q=>{const source=q.source||{}, topic=[...(q.tags?.topic||[])].filter(t=>t!==source.title&&!/^快乐星期五|^goal\.|^待审原卷题$/.test(t)); const nodeName=q.primary_node&&N[q.primary_node]?N[q.primary_node].name:''; const display=(source.kind==='exam'||source.paper_id)?(q.statement||q.title||'未命名题目'):(q.statement||q.title||'未命名题目'); const review=q.auto_review||{}; const status=bankIsExcluded(q)?'已抑制 · 仅供查阅':q.verification_status==='verified'?'已校验':bankCanCompose(q)?'可组题':q.readiness==='draft'?'草稿':review.answer_check==='mismatch'?'不一致':review.status==='C'?'无法核对':'待人工复核'; const tone=bankCanCompose(q)?'ready':status==='不一致'?'danger':'warning'; return `<tr><td><input type="checkbox" data-bank-select="${q.id}" aria-label="选择${q.id}" ${chosenBank.has(q.id)?'checked':''} ${bankCanCompose(q)?'':'disabled'}></td><td><button class="bank-id" data-bank-open="${q.id}">${q.id}</button><small>${esc(source.title||P[source.paper_id]?.title||source.source_file||'候选题')}</small></td><td><button class="bank-title" data-bank-open="${q.id}">${bankMathText(display)}</button><div class="bank-tags">${[...new Set([nodeName,...topic].filter(Boolean))].map(t=>`<span>${esc(t)}</span>`).join('')}</div></td><td>${difficultyName(q)}</td><td><span class="bank-state ${tone}">${status}</span>${bankShowsAudit()&&q.duplicate_candidates?.length?'<small>摘要同名 · 待比对</small>':''}</td></tr>`}).join('')||'<tr><td colspan="5" class="empty">没有符合条件的题目</td></tr>';
+
  let pager=$('#bankPagination');if(!pager){pager=document.createElement('div');pager.id='bankPagination';pager.className='bank-pagination';pager.innerHTML='<button id="bankPrev">上一页</button><span id="bankPageInfo" role="button" tabindex="0" title="点击输入目标页码"></span><button id="bankNext">下一页</button>';$('#bankRows').closest('.bank-table-wrap').after(pager);$('#bankPrev').onclick=()=>{bankPage=Math.max(1,bankPage-1);renderBank()};$('#bankNext').onclick=()=>{bankPage=Math.min(Math.max(1,Math.ceil(bankFiltered().length/BANK_PAGE_SIZE)),bankPage+1);renderBank()};$('#bankPageInfo').onclick=editBankPage;$('#bankPageInfo').onkeydown=e=>{if(e.target===e.currentTarget&&(e.key==='Enter'||e.key===' ')){e.preventDefault();editBankPage()}}} $('#bankPageInfo').textContent=`第 ${bankPage} / ${pageCount} 页 · 每页 ${BANK_PAGE_SIZE} 题`;$('#bankPrev').disabled=bankPage<=1;$('#bankNext').disabled=bankPage>=pageCount;
+
 }
+
 function bankDetailImages(values,label){
+
  const paths=[...new Set(values.map(v=>typeof v==='string'?v:v?.path).filter(p=>typeof p==='string'&&p.startsWith('assets/')&&!p.split('/').includes('..')))];
+
  return paths.map((path,i)=>`<figure style="margin:16px 0"><a href="${esc(encodeURI(path))}" target="_blank" rel="noopener"><img src="${esc(encodeURI(path))}" alt="${esc(label)} ${i+1}" loading="lazy" style="display:block;max-width:100%;height:auto"></a></figure>`).join('');
+
 }
+
 function bankSolutionImages(q){return bankDetailImages([q.solution_figure_asset,...(q.solution_figure_assets||[])],'解答图');}
+
+function bankShowsAudit(){return window.SHIJI_PRESENTATION_ENV==='development';}
+function bankAuditMarkup(q,original){
+ if(!bankShowsAudit())return '';
+ const source=q.source||{},pages=source.source_pages||[source.page].filter(Boolean),answerPages=source.answer_source_pdf_pages||[source.answer_source_pdf_page].filter(Boolean);
+ const images=bankDetailImages([source.source_image,...(source.source_images||[])],'题目原页')+bankDetailImages([source.answer_image,...(source.answer_images||[])],'答案原页');
+ const pdf=source.pdf||(original&&P[original.paper_id]?.local_pdf),pdfLink=typeof pdf==='string'&&pdf.startsWith('sources/')?`<p><a href="${esc(encodeURI(pdf))}" target="_blank" rel="noopener">核对原始PDF</a></p>`:'';
+ const history=(q.presentation_audit||[]).map(entry=>`<details><summary>呈现修订 ${esc(entry.at||'')} · ${esc(entry.task_id||'')}</summary>${Object.entries(entry.before_fields||{}).map(([field,value])=>`<p><b>修订前 ${esc(field)}</b></p><div class="statement">${bankMathText(typeof value==='string'?value:JSON.stringify(value))}</div>`).join('')}${(entry.moved_segments||[]).map(x=>`<p>${esc(x.field||'')} · ${esc(x.reason||'制作记录')}：${esc(x.text||'')}</p>`).join('')}</details>`).join('');
+ const note=q.readiness_note?`<p class="hint">${bankMathText(q.readiness_note)}</p>`:'';
+ const duplicates=q.duplicate_candidates?.length?`<p>重复候选：${q.duplicate_candidates.map(esc).join('、')}</p>`:'';
+ if(!(source.source_file||note||images||pdfLink||history||duplicates))return '';
+ return `<details class="bank-production-audit" data-dev-audit style="margin-top:16px"><summary>制作与来源审计（DEV）</summary>${source.source_file?`<p>${esc(source.source_file)}</p>`:''}<p>${source.exercise?'练习 '+esc(source.exercise)+' ':''}${source.item_number?'第 '+esc(source.item_number)+' 题 · ':''}${pages.length?'题目 PDF 第 '+pages.map(esc).join('、')+' 页':''}${answerPages.length?'；答案 PDF 第 '+answerPages.map(esc).join('、')+' 页':''}</p>${note}${duplicates}${pdfLink}${images}${history}</details>`;
+}
 function openBankQuestion(id){
  const q=B[id];if(!q)return;
  const original=!q.review_only&&q.legacy_id?D.questions.find(x=>x.id===q.legacy_id):null,source=q.source||{};
- const statement=original?card(original,null):`<div class="statement">${bankMathText(q.statement||'暂无题干')}</div>`;
- const figures=bankDetailImages([q.figure_asset,...(Array.isArray(q.figure_assets)?q.figure_assets:[])],'原题图');
- const pages=source.source_pages||[source.page].filter(Boolean),answerPages=source.answer_source_pdf_pages||[source.answer_source_pdf_page].filter(Boolean);
- const sourceImages=bankDetailImages([source.source_image,...(source.source_images||[])],'题目原页');
- const answerImages=bankDetailImages([source.answer_image,...(source.answer_images||[])],'答案原页');
+ // Reusable question definitions are separate from personal exam attempts.
+ const statement=`<div class="statement bank-statement">${bankMathText(q.statement||'暂无题干')}</div>`;
+ const figures=bankDetailImages([q.figure_asset,...(Array.isArray(q.figure_assets)?q.figure_assets:[]),original?.definition_figure],'题目配图');
  const expertFinalIsolation=q.answer_resolution==='expert_final_isolated'&&q.expert_adjudication?.decision_file?.startsWith('reviews/jdx7-semantic-judgment-ou-20261112/');
- const grade=expertFinalIsolation?'原书条件错误（已隔离）':q.auto_review?.status==='A'?'A级候选':q.auto_review?.status==='C'?'识别片段／待整理':'待核对';
  const pendingBookAnswer=(/^JDX[789]/.test(q.id)||/^OMS[678]/.test(q.id)||/^JZS[6789]/.test(q.id))&&q.readiness!=='ready'&&q.answer_source?.answer_as_printed;
- const answer=(q.answer||q.solution)?`<details class="training-solution"><summary>查看答案与解题过程</summary><div class="analysis-body">${q.answer?`<p><b>${pendingBookAnswer?(expertFinalIsolation?'原书答案（已留审计）':'原书答案（待核）'):'答案'}</b></p><div class="statement">${bankMathText(q.answer)}</div>${pendingBookAnswer&&q.independent_answer?`<p><b>${expertFinalIsolation?'专家最终隔离结论':'独立验算结果（待裁定）'}</b></p><div class="statement">${bankMathText(q.independent_answer)}</div>`:''}`:''}${q.solution?`<p><b>解题过程</b></p><div class="statement">${bankMathText(q.solution)}</div>`:''}${bankSolutionImages(q)}</div></details>`:'';
- const provenance=source.source_file?`<details style="margin-top:16px"><summary>核对原题与答案来源</summary><p>${esc(source.source_file)}</p><p>${source.exercise?'练习 '+esc(source.exercise)+' ':''}${source.production_split_label?esc(source.production_split_label)+' · ':(source.item_number?'第 '+esc(source.item_number)+' 题 · ':'')}题目 PDF 第 ${pages.map(esc).join('、')} 页${answerPages.length?'；答案 PDF 第 '+answerPages.map(esc).join('、')+' 页':''}</p>${sourceImages}${answerImages}</details>`:'';
- $('#dialogContent').innerHTML=`<div class="bank-detail-heading"><span>${esc(q.id)} · v${q.version||1}</span><span>${difficultyName(q)} · ${bankCanCompose(q)?'可组题':bankIsExcluded(q)?'历史记录（不可组题）':grade}</span></div><p class="hint">${bankMathText(q.readiness_note||'待人工核对原文、答案和标签。')}${q.duplicate_candidates?.length?' · 与 '+q.duplicate_candidates.map(esc).join('、')+' 摘要相同，需对照原题，尚未合并。':''}</p>${statement}${figures}${answer}${provenance}<div class="composer-actions"><button data-compose-node="${q.primary_node||''}">练同类题</button><button class="primary-action" data-bank-add="${id}" ${bankCanCompose(q)?'':'disabled'}>加入选题</button></div>`;
+ const solution=q.solution||q.solution_detail||'';
+ const answer=(q.answer||solution)?`<details class="training-solution"><summary>查看答案与完整解题过程</summary><div class="analysis-body">${q.answer?`<p><b>${pendingBookAnswer?'原书答案（待核）':'答案'}</b></p><div class="statement">${bankMathText(q.answer)}</div>${pendingBookAnswer&&q.independent_answer?`<p><b>${expertFinalIsolation?'隔离结论':'独立验算结果（待裁定）'}</b></p><div class="statement">${bankMathText(q.independent_answer)}</div>`:''}`:''}${solution?`<p><b>完整解题过程</b></p><div class="statement">${bankMathText(solution)}</div>`:''}${bankSolutionImages(q)}</div></details>`:'';
+ const info=bankSourceInfo(q),sourceLabel=info?.label?.replace(/[.]pdf$/i,'')||source.title||'';
+ const status=bankCanCompose(q)?'可组题':bankIsExcluded(q)?'历史记录（不可组题）':'待核（暂不可组题）';
+ $('#dialogContent').innerHTML=`<div class="bank-detail-heading"><span>${esc(q.id)} · v${q.version||1}</span><span>${difficultyName(q)} · ${status}</span></div>${sourceLabel?`<p class="hint bank-source-summary">${esc(sourceLabel)}</p>`:''}${statement}${figures}${answer}${bankAuditMarkup(q,original)}<div class="composer-actions"><button data-compose-node="${q.primary_node||''}">练同类题</button><button class="primary-action" data-bank-add="${id}" ${bankCanCompose(q)?'':'disabled'}>加入选题</button></div>`;
  $('#recordDialog').showModal();
 }
+
 const composeDialog=document.createElement('dialog');composeDialog.id='composeDialog';document.body.append(composeDialog);
+
 function openComposer(node='',ids=[],editId=null,prefill=null){
+
  if($('#recordDialog').open)$('#recordDialog').close();composeIds=[...new Set(ids.map(id=>B[id]?.id||id))];composeSessionId=editId;composeSourceId=!editId&&prefill?prefill.id:null;composeOverrides={};for(const [id,q] of Object.entries(prefill?.question_snapshots||{})){const canonical=B[id]?.id||id;if(!composeOverrides[canonical])composeOverrides[canonical]={...structuredClone(q),id:canonical};}
+
  composeDialog.innerHTML=`<form id="composeForm"><div class="composer-head"><div><p class="page-eyebrow">BUILD A PRACTICE</p><h2>${editId?'编辑练习':'组一份练习'}</h2></div><button type="button" data-compose-close aria-label="关闭组练习">✕</button></div><div class="composer-fields"><label>练习名称<input id="composeTitle" required maxlength="80" value="${esc(node?N[node].name+' · 巩固练习':'我的强化训练')}"></label><label>知识点<select id="composeNode"><option value="">全部知识点</option>${C.nodes.filter(n=>BANK.some(q=>q.primary_node===n.id)).map(n=>`<option value="${n.id}" ${node===n.id?'selected':''}>${esc(n.name)}</option>`).join('')}</select></label><label>题目数量<input id="composeCount" type="number" min="1" max="30" required value="${composeIds.length||3}"></label><label>难度<select id="composeLevel"><option value="">不限（含待评定）</option><option value="1">基础</option><option value="2">进阶</option><option value="3">挑战</option></select></label><label>题目范围<select id="composeRange"><option value="all">全部可组题</option><option value="wrong">曾经失分</option><option value="unseen">从未作答</option><option value="not-trained">尚未参加本站训练</option></select></label><label>预计用时（分钟）<input id="composeMinutes" type="number" min="1" max="300" required value="20"></label><label>计划日期（可选）<input id="composeDate" type="date"></label><label>训练目标<input id="composeGoal" maxlength="160" placeholder="例如：列出参数取特殊值的全部情况"></label></div><div class="composer-actions"><button type="button" id="recommendQuestions">按条件筛选</button><button type="button" id="browseBank">去题库手动选题</button></div><p id="composeNotice" role="status"></p><ol id="composePreview" class="compose-preview"></ol><div class="composer-footer"><small>保存为草稿，可反复编辑；发布后才能开始练习。</small><button class="primary-action" type="submit">保存草稿</button></div></form>`;
+
  $('#composeForm').addEventListener('submit',saveComposer);$('#recommendQuestions').onclick=recommendQuestions;
+
  $('#browseBank').onclick=()=>{pendingComposer={editId:composeSessionId,prefill:{no_copy_suffix:true,id:composeSessionId||composeSourceId,title:$('#composeTitle').value,minutes:Number($('#composeMinutes').value),planned_date:$('#composeDate').value,goal:$('#composeGoal').value,criteria:{node:$('#composeNode').value,level:$('#composeLevel').value,range:$('#composeRange').value},question_snapshots:structuredClone(composeOverrides)}};chosenBank.clear();composeIds.forEach(id=>chosenBank.add(id));composeDialog.close();$('#bankNode').value=$('#composeNode').value;renderBank();window.parent.location.hash='bank'};
+
  for(const id of ['composeNode','composeLevel','composeRange'])$('#'+id).onchange=()=>{composeIds=[];renderComposePreview();$('#composeNotice').textContent='条件已改变，请重新筛选题目。'};
+
  if(prefill){$('#composeTitle').value=prefill.title+(editId||prefill.no_copy_suffix?'':' · 副本');$('#composeMinutes').value=prefill.minutes;$('#composeDate').value=prefill.planned_date||'';$('#composeGoal').value=prefill.goal||'';$('#composeNode').value=prefill.criteria?.node||node;$('#composeLevel').value=prefill.criteria?.level||'';$('#composeRange').value=prefill.criteria?.range||'all'}
+
  composeDialog.showModal();renderComposePreview();if(!ids.length)recommendQuestions();
+
 }
+
 function composeCandidates(){const node=$('#composeNode').value,level=$('#composeLevel').value,range=$('#composeRange').value;return BANK.filter(q=>bankCanCompose(q)&&(!node||q.primary_node===node)&&(!level||String(q.difficulty)===level)&&(range!=='wrong'||D.questions.some(x=>x.id===q.legacy_id&&x.points_lost>0))&&(range!=='unseen'||!D.questions.some(x=>x.id===q.legacy_id)&&!trainingStore.sessions.some(t=>t.responses[q.id]?.verdict))&&(range!=='not-trained'||!trainingStore.sessions.some(t=>t.question_ids.includes(q.id))))}
+
 function recommendQuestions(){const count=Number($('#composeCount').value);if(!Number.isInteger(count)||count<1||count>30){$('#composeNotice').textContent='题目数量请填写1—30。';return}const candidates=composeCandidates();composeIds=candidates.slice(0,count).map(q=>q.id);$('#composeNotice').textContent=candidates.length<count?`符合条件仅 ${candidates.length} 道，未凑足 ${count} 道。可以调整条件，或将数量改为实际题数。`:`已选 ${count} 道，可以替换、移除或调整顺序。`;renderComposePreview()}
+
 function composeQuestion(id){return composeOverrides[id]||B[id]}
-function renderComposePreview(){const box=$('#composePreview');box.innerHTML=composeIds.map((id,i)=>`<li><div class="compose-item"><div class="compose-item-heading"><span><b>${id}</b> <span class="compose-item-title">${bankMathText(composeQuestion(id).title)}</span><small>${esc(bankNodeName(B[id]))} · ${difficultyName(B[id])}</small></span><div><button type="button" data-compose-up="${i}" ${i?'':'disabled'} aria-label="上移${id}">↑</button><button type="button" data-compose-down="${i}" ${i<composeIds.length-1?'':'disabled'} aria-label="下移${id}">↓</button><button type="button" data-compose-replace="${i}">换题</button><button type="button" data-compose-remove="${i}">移除</button></div></div>${bankDetailImages([composeQuestion(id).figure_asset,...(composeQuestion(id).figure_assets||[])],'原题图')}<details class="compose-item-editor"><summary>编辑本次题目</summary><p>只修改这份练习，题库原题与原考试记录保留。</p>${[['title','题目标题'],['statement','题干'],['answer','答案'],['solution','解题提示']].map(([field,label])=>`<label>${label}<textarea rows="${field==='statement'?3:2}" maxlength="${field==='statement'?20000:5000}" data-edit-question="${id}" data-edit-field="${field}">${esc(composeQuestion(id)[field]||'')}</textarea></label>`).join('')}</details></div></li>`).join('')||'<li class="empty">暂无题目，请调整条件或去题库选题。</li>';box.querySelectorAll('[data-edit-question]').forEach(input=>input.oninput=()=>{const id=input.dataset.editQuestion;if(!composeOverrides[id])composeOverrides[id]=structuredClone(B[id]);composeOverrides[id][input.dataset.editField]=input.value;composeOverrides[id].customized=true;if(input.dataset.editField==='title')input.closest('li').querySelector('.compose-item-title').textContent=input.value})}
+
+function renderComposePreview(){const box=$('#composePreview');box.innerHTML=composeIds.map((id,i)=>`<li><div class="compose-item"><div class="compose-item-heading"><span><b>${id}</b> <span class="compose-item-title">${bankMathText(composeQuestion(id).title)}</span><small>${esc(bankNodeName(B[id]))} · ${difficultyName(B[id])}</small></span><div><button type="button" data-compose-up="${i}" ${i?'':'disabled'} aria-label="上移${id}">↑</button><button type="button" data-compose-down="${i}" ${i<composeIds.length-1?'':'disabled'} aria-label="下移${id}">↓</button><button type="button" data-compose-replace="${i}">换题</button><button type="button" data-compose-remove="${i}">移除</button></div></div>${bankDetailImages([composeQuestion(id).figure_asset,...(composeQuestion(id).figure_assets||[])],'原题图')}<details class="compose-item-editor"><summary>编辑本次题目</summary><p>只修改这份练习，题库原题与原考试记录保留。</p>${[['title','题目标题'],['statement','题干'],['answer','答案'],['solution','完整解题过程']].map(([field,label])=>`<label>${label}<textarea rows="${field==='statement'?3:2}" maxlength="${field==='statement'?20000:5000}" data-edit-question="${id}" data-edit-field="${field}">${esc(composeQuestion(id)[field]||'')}</textarea></label>`).join('')}</details></div></li>`).join('')||'<li class="empty">暂无题目，请调整条件或去题库选题。</li>';box.querySelectorAll('[data-edit-question]').forEach(input=>input.oninput=()=>{const id=input.dataset.editQuestion;if(!composeOverrides[id])composeOverrides[id]=structuredClone(B[id]);composeOverrides[id][input.dataset.editField]=input.value;composeOverrides[id].customized=true;if(input.dataset.editField==='title')input.closest('li').querySelector('.compose-item-title').textContent=input.value})}
+
 function saveComposer(e){
+
  e.preventDefault();const count=Number($('#composeCount').value);if(!composeIds.length||composeIds.length!==count){$('#composeNotice').textContent=`题单实际有 ${composeIds.length} 道，请将题目数量调整为一致后保存。`;return}
+
  if(composeIds.some(id=>!bankCanCompose(B[id])||!composeQuestion(id).statement.trim()||!composeQuestion(id).answer.trim())){$('#composeNotice').textContent='题目必须可组题，且题干与答案不能为空。';return}
+
  const previous=trainingStore.sessions.find(t=>t.id===composeSessionId);if(previous&&!['draft','planned'].includes(previous.status)){$('#composeNotice').textContent='这份练习已经开始，请复制后再编辑。';return}
+
  const now=new Date().toISOString(),t={id:previous?.id||'T-'+crypto.randomUUID(),title:$('#composeTitle').value.trim(),question_ids:[...composeIds],question_versions:Object.fromEntries(composeIds.map(id=>[id,B[id].version])),question_snapshots:Object.fromEntries(composeIds.map(id=>{const q=composeQuestion(id);return [id,{id:q.id,version:q.version,title:q.title,statement:q.statement,answer:q.answer,solution:q.solution,primary_node:q.primary_node,difficulty:q.difficulty,figure_asset:q.figure_asset||null,figure_assets:structuredClone(q.figure_assets||[]),solution_figure_asset:q.solution_figure_asset||null,solution_figure_assets:structuredClone(q.solution_figure_assets||[]),customized:!!q.customized}]})),criteria:{node:$('#composeNode').value,level:$('#composeLevel').value,range:$('#composeRange').value},minutes:Number($('#composeMinutes').value),planned_date:$('#composeDate').value,goal:$('#composeGoal').value.trim(),created_at:previous?.created_at||now,updated_at:now,revision:(previous?.revision||0)+1,status:'draft',responses:{},started_at:null,completed_at:null,published_at:null,source_training_id:previous?.source_training_id||composeSourceId};if(!t.title)return;
+
  if(previous){t.publication_history=previous.publication_history||[];if(previous.published_at)t.publication_history=[...t.publication_history,{published_at:previous.published_at,revision:previous.revision||1,title:previous.title,question_ids:previous.question_ids}];trainingStore.sessions[trainingStore.sessions.indexOf(previous)]=t}else trainingStore.sessions.unshift(t);
+
  const persisted=saveTrainings();composeDialog.close();runnerId=null;$('#trainingStatus').value='';renderTrainings();$('#trainingNotice').textContent=persisted?'草稿已保存，可继续编辑或预览发布。':'草稿仅保留在当前页面，浏览器未能保存，请立即导出备份。';window.parent.location.hash='practice';
+
 }
+
 function editTraining(id,copy=false){const t=trainingStore.sessions.find(t=>t.id===id);if(!t)return;if(!copy&&!['draft','planned'].includes(t.status))return;openComposer(t.criteria?.node||'',t.question_ids,copy?null:id,t)}
-function previewTraining(id){const t=trainingStore.sessions.find(t=>t.id===id);if(!t||t.status!=='draft')return;$('#dialogContent').innerHTML=`<p class="page-eyebrow">PUBLISH PREVIEW</p><h2>${esc(t.title)}</h2><p class="sub">${t.question_ids.length}题 · 预计${t.minutes}分钟${t.planned_date?' · '+esc(t.planned_date):''} · 草稿第${t.revision||1}版</p>${t.goal?`<p>${esc(t.goal)}</p>`:''}<ol class="publication-preview">${t.question_ids.map(qid=>{const q=t.question_snapshots?.[qid]||B[qid];return `<li><small>${qid}${q.customized?' · 本次题目已编辑':''}</small><div class="statement">${bankMathText(q.statement)}</div>${bankDetailImages([q.figure_asset,...(q.figure_assets||[])],'原题图')}<details><summary>核对答案与提示</summary><p>${bankMathText(q.answer)}</p><p>${bankMathText(q.solution)}</p>${bankSolutionImages(q)}</details></li>`}).join('')}</ol><div class="publication-actions"><small>发布后列为待开始；此操作只发布本地练习，不上传 GitHub。</small><button data-preview-edit="${id}">返回编辑</button><button class="primary-action" data-publish-training="${id}">发布练习</button></div>`;$('#recordDialog').showModal()}
+
+function previewTraining(id){const t=trainingStore.sessions.find(t=>t.id===id);if(!t||t.status!=='draft')return;$('#dialogContent').innerHTML=`<p class="page-eyebrow">PUBLISH PREVIEW</p><h2>${esc(t.title)}</h2><p class="sub">${t.question_ids.length}题 · 预计${t.minutes}分钟${t.planned_date?' · '+esc(t.planned_date):''} · 草稿第${t.revision||1}版</p>${t.goal?`<p>${esc(t.goal)}</p>`:''}<ol class="publication-preview">${t.question_ids.map(qid=>{const q=t.question_snapshots?.[qid]||B[qid];return `<li><small>${qid}${q.customized?' · 本次题目已编辑':''}</small><div class="statement">${bankMathText(q.statement)}</div>${bankDetailImages([q.figure_asset,...(q.figure_assets||[])],'原题图')}<details><summary>核对答案与完整解题过程</summary><p>${bankMathText(q.answer)}</p><p>${bankMathText(q.solution)}</p>${bankSolutionImages(q)}</details></li>`}).join('')}</ol><div class="publication-actions"><small>发布后列为待开始；此操作只发布本地练习，不上传 GitHub。</small><button data-preview-edit="${id}">返回编辑</button><button class="primary-action" data-publish-training="${id}">发布练习</button></div>`;$('#recordDialog').showModal()}
+
 function publishTraining(id){const t=trainingStore.sessions.find(t=>t.id===id);if(!t||t.status!=='draft')return;if(t.question_ids.some(id=>!bankCanCompose(B[id]))||new Set(t.question_ids.map(id=>B[id]?.id||id)).size!==t.question_ids.length){$('#trainingNotice').textContent='题单含已抑制或重复的题目，请编辑替换后发布。';return}t.status='planned';t.published_at=new Date().toISOString();t.updated_at=t.published_at;saveTrainings();$('#recordDialog').close();renderTrainings();$('#trainingNotice').textContent='练习已发布，可以开始作答。'}
+
 function renderTrainings(){const filter=$('#trainingStatus').value,list=trainingStore.sessions.filter(t=>!filter||t.status===filter);$('#trainingList').innerHTML=list.map(t=>`<article class="training-card"><div><span class="training-state">${{draft:'草稿',planned:'已发布 · 待开始',active:'进行中',completed:'已完成'}[t.status]}</span><h2>${esc(t.title)}</h2><p>${t.question_ids.length}题 · 预计${t.minutes}分钟${t.planned_date?' · '+esc(t.planned_date):''}</p>${t.goal?`<p>${esc(t.goal)}</p>`:''}${t.status==='completed'?`<small>自评：正确 ${t.question_ids.filter(id=>t.responses[id]?.verdict==='correct').length} / ${t.question_ids.length} · 使用提示 ${t.question_ids.filter(id=>t.responses[id]?.hint).length}题</small>`:''}</div><div class="training-card-actions"><button data-print-training="${t.id}">打印试卷</button>${['draft','planned'].includes(t.status)?`<button data-edit-training="${t.id}">编辑</button>`:`<button data-copy-training="${t.id}">复制并编辑</button>`}${t.status==='draft'?`<button class="primary-action" data-preview-training="${t.id}">预览并发布</button>`:`<button class="primary-action" data-run-training="${t.id}">${{planned:'开始练习',active:'继续练习',completed:'查看记录'}[t.status]}</button>`}</div></article>`).join('')||'<div class="empty">还没有练习。从错题点「练同类题」，或去题库选题。</div>';$('#trainingList').hidden=!!runnerId;$('#trainingRunner').hidden=!runnerId}
-function runTraining(id){const t=trainingStore.sessions.find(t=>t.id===id);if(!t||!['planned','active','completed'].includes(t.status))return;runnerId=id;if(t.status==='planned'){t.status='active';t.started_at=new Date().toISOString();saveTrainings()}renderTrainings();const done=t.status==='completed';$('#trainingRunner').innerHTML=`<div class="runner-head"><button id="backToTrainings">← 训练列表</button><button data-print-training="${t.id}">打印试卷</button><div><h2>${esc(t.title)}</h2><p>${t.question_ids.length}题 · 预计${t.minutes}分钟 · ${done?'已完成 · 自评记录':'可随时保存后继续'}</p></div>${done?'':'<button class="primary-action" id="finishTraining">完成并保存结果</button>'}</div><p id="runnerNotice" role="status"></p>${t.question_ids.map((qid,i)=>{const q=t.question_snapshots?.[qid]||B[qid],a=t.responses[qid]||{answer:'',verdict:'',independent:true,hint:false};return `<article class="q training-question" data-response-id="${qid}"><div class="q-meta"><span>${String(i+1).padStart(2,'0')} · ${qid} · ${esc(bankNodeName(q))}</span><span>${difficultyName(q)}</span></div><div class="statement">${bankMathText(q.statement)}</div>${bankDetailImages([q.figure_asset,...(q.figure_assets||[])],'原题图')}<label class="answer-label">我的作答<textarea class="training-answer" maxlength="20000" rows="3" ${done?'disabled':''}>${esc(a.answer)}</textarea></label><div class="answer-controls"><label><input type="checkbox" class="response-independent" ${a.independent?'checked':''} ${done?'disabled':''}>独立完成（本人记录）</label><label><input type="checkbox" class="response-hint" ${a.hint?'checked':''} ${done?'disabled':''}>使用过提示／答案</label><label>核对结果<select class="response-verdict" ${done?'disabled':''}><option value="">尚未核对</option>${[['correct','正确'],['partial','部分正确'],['wrong','错误'],['blank','未作答']].map(([v,label])=>`<option value="${v}" ${a.verdict===v?'selected':''}>${label}</option>`).join('')}</select></label></div><details class="training-solution" data-solution-id="${qid}"><summary>查看答案与解题提示</summary><div class="analysis-body"><p><b>答案</b>${bankMathText(q.answer)}</p><p><b>提示</b>${bankMathText(q.solution||'请结合原卷核对解题过程。')}</p>${bankSolutionImages(q)}</div></details></article>`}).join('')}`;
+
+function runTraining(id){const t=trainingStore.sessions.find(t=>t.id===id);if(!t||!['planned','active','completed'].includes(t.status))return;runnerId=id;if(t.status==='planned'){t.status='active';t.started_at=new Date().toISOString();saveTrainings()}renderTrainings();const done=t.status==='completed';$('#trainingRunner').innerHTML=`<div class="runner-head"><button id="backToTrainings">← 训练列表</button><button data-print-training="${t.id}">打印试卷</button><div><h2>${esc(t.title)}</h2><p>${t.question_ids.length}题 · 预计${t.minutes}分钟 · ${done?'已完成 · 自评记录':'可随时保存后继续'}</p></div>${done?'':'<button class="primary-action" id="finishTraining">完成并保存结果</button>'}</div><p id="runnerNotice" role="status"></p>${t.question_ids.map((qid,i)=>{const q=t.question_snapshots?.[qid]||B[qid],a=t.responses[qid]||{answer:'',verdict:'',independent:true,hint:false};return `<article class="q training-question" data-response-id="${qid}"><div class="q-meta"><span>${String(i+1).padStart(2,'0')} · ${qid} · ${esc(bankNodeName(q))}</span><span>${difficultyName(q)}</span></div><div class="statement">${bankMathText(q.statement)}</div>${bankDetailImages([q.figure_asset,...(q.figure_assets||[])],'原题图')}<label class="answer-label">我的作答<textarea class="training-answer" maxlength="20000" rows="3" ${done?'disabled':''}>${esc(a.answer)}</textarea></label><div class="answer-controls"><label><input type="checkbox" class="response-independent" ${a.independent?'checked':''} ${done?'disabled':''}>独立完成（本人记录）</label><label><input type="checkbox" class="response-hint" ${a.hint?'checked':''} ${done?'disabled':''}>使用过提示／答案</label><label>核对结果<select class="response-verdict" ${done?'disabled':''}><option value="">尚未核对</option>${[['correct','正确'],['partial','部分正确'],['wrong','错误'],['blank','未作答']].map(([v,label])=>`<option value="${v}" ${a.verdict===v?'selected':''}>${label}</option>`).join('')}</select></label></div><details class="training-solution" data-solution-id="${qid}"><summary>查看答案与完整解题过程</summary><div class="analysis-body"><p><b>答案</b>${bankMathText(q.answer)}</p><p><b>完整解题过程</b>${bankMathText(q.solution||q.solution_detail||'暂无完整解题过程。')}</p>${bankSolutionImages(q)}</div></details></article>`}).join('')}`;
+
  $('#backToTrainings').onclick=()=>{saveRunner();runnerId=null;renderTrainings()};if(!done){$('#finishTraining').onclick=finishTraining;$('#trainingRunner').oninput=saveRunner;$('#trainingRunner').onchange=saveRunner;$('#trainingRunner').querySelectorAll('.training-solution').forEach(el=>el.addEventListener('toggle',()=>{if(el.open){const row=el.closest('.training-question');row.querySelector('.response-hint').checked=true;row.querySelector('.response-independent').checked=false;saveRunner()}}))}
+
 }
+
 function saveRunner(){const t=trainingStore.sessions.find(t=>t.id===runnerId);if(!t||t.status==='completed')return;$('#trainingRunner').querySelectorAll('[data-response-id]').forEach(row=>{if(row.querySelector('.response-hint').checked)row.querySelector('.response-independent').checked=false;t.responses[row.dataset.responseId]={answer:row.querySelector('textarea').value,verdict:row.querySelector('.response-verdict').value,independent:row.querySelector('.response-independent').checked&&!row.querySelector('.response-hint').checked,hint:row.querySelector('.response-hint').checked}});t.updated_at=new Date().toISOString();saveTrainings()}
+
 function finishTraining(){saveRunner();const t=trainingStore.sessions.find(t=>t.id===runnerId);if(t.question_ids.some(id=>!t.responses[id]?.verdict)){$('#runnerNotice').textContent='请先为每道题选择核对结果；空白题请选“未作答”。';return}t.status='completed';t.completed_at=new Date().toISOString();saveTrainings();syncLocalPractice();runTraining(t.id)}
+
 const originalPracticeCounts=Object.fromEntries(Object.entries(D.node_counts).map(([id,c])=>[id,{correct:c.practice_correct,wrong:c.practice_wrong}]));
+
 function syncLocalPractice(){if(trainingDemo)return;if(trainingStore.sessions.some(t=>t.status==='completed'))$('#practiceHint').textContent='含本地训练自评记录；独立完成与是否使用提示请在训练详情核对。';for(const [id,c] of Object.entries(D.node_counts)){c.practice_correct=originalPracticeCounts[id].correct;c.practice_wrong=originalPracticeCounts[id].wrong}for(const t of trainingStore.sessions.filter(t=>t.status==='completed'))for(const id of t.question_ids){const c=D.node_counts[B[id].primary_node],a=t.responses[id];if(!c)continue;c[a.verdict==='correct'?'practice_correct':'practice_wrong']++}renderNodes()}
+
 function downloadTraining(){const data=JSON.stringify(trainingStore,null,2),url=URL.createObjectURL(new Blob([data],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='拾级-训练备份-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+
 $('#exportTraining').onclick=downloadTraining;
+
 $('#importTraining').onchange=async e=>{try{const file=e.target.files[0];if(!file)return;if(file.size>5000000)throw Error('备份文件超过5MB');const incoming=JSON.parse(await file.text());validateTrainingBackup(incoming);let added=0,conflicts=0;for(const t of incoming.sessions){const existing=trainingStore.sessions.find(x=>x.id===t.id);if(existing){if(JSON.stringify(existing)!==JSON.stringify(t))conflicts++;continue}if(t.status==='planned'&&!t.published_at)t.status='draft';trainingStore.sessions.push(t);added++}saveTrainings();syncLocalPractice();renderTrainings();$('#trainingNotice').textContent=`已导入${added}份；${conflicts}份同编号内容不同，保留本机记录未覆盖。`}catch(err){$('#trainingNotice').textContent='未导入：'+err.message}finally{e.target.value=''}};
+
 $('#bankNode').innerHTML+=C.nodes.filter(n=>BANK.some(q=>q.primary_node===n.id)).map(n=>`<option value="${n.id}">${esc(n.name)}</option>`).join('');const statusLabels={ready:'可组题',needs_review:'待核对',draft:'草稿',suppressed:'已抑制',duplicate_suppressed:'重复抑制',excluded:'已排除'};$('#bankReady').innerHTML='<option value="">全部状态</option>'+[...new Set(BANK.map(q=>q.readiness).filter(Boolean))].sort().map(s=>`<option value="${esc(s)}">${esc(statusLabels[s]||s)}</option>`).join('');// 题库来源筛选只列出题库中实际存在的来源；考试原卷属于原始数据，不生成空筛选项。
+
 $('#bankPaper').innerHTML=bankSourceOptions(BANK);$('#bankPaper').setAttribute('aria-label','全部来源');
+
 for(const id of ['bankNode','bankLevel','bankReady','bankPaper'])$('#'+id).onchange=()=>{bankPage=1;renderBank()};$('#bankSearch').oninput=()=>{bankPage=1;renderBank()};
+
 $('#newTraining').onclick=()=>openComposer();$('#trainingStatus').onchange=renderTrainings;$('#composeSelected').onclick=()=>{const pending=pendingComposer;pendingComposer=null;if(pending)openComposer(pending.prefill.criteria.node,[...chosenBank],pending.editId,pending.prefill);else openComposer('',[...chosenBank]);renderBank()};$('#clearBankSelection').onclick=()=>{chosenBank.clear();renderBank()};
+
 document.addEventListener('change',e=>{const id=e.target.dataset.bankSelect;if(id){const q=B[id];if(!bankCanCompose(q)){e.target.checked=false;chosenBank.delete(id)}else if(e.target.checked)chosenBank.add(q.id);else chosenBank.delete(q.id);renderBank()}});
+
 document.addEventListener('click',e=>{
+
  let b=e.target.closest('[data-bank-open]');if(b){openBankQuestion(b.dataset.bankOpen);return}b=e.target.closest('[data-bank-add]');if(b){const q=B[b.dataset.bankAdd];if(!bankCanCompose(q))return;chosenBank.add(q.id);renderBank();$('#recordDialog').close();return}
+
  b=e.target.closest('[data-compose-node]');if(b){openComposer(b.dataset.composeNode);return}b=e.target.closest('[data-compose-close]');if(b){composeDialog.close();return}
+
  for(const action of ['up','down','remove','replace']){b=e.target.closest('[data-compose-'+action+']');if(!b)continue;const i=Number(b.dataset['compose'+action[0].toUpperCase()+action.slice(1)]);if(action==='remove'){composeIds.splice(i,1);$('#composeCount').value=composeIds.length;}if(action==='up'&&i>0)[composeIds[i-1],composeIds[i]]=[composeIds[i],composeIds[i-1]];if(action==='down'&&i<composeIds.length-1)[composeIds[i+1],composeIds[i]]=[composeIds[i],composeIds[i+1]];if(action==='replace'){const replacement=composeCandidates().find(q=>!composeIds.includes(q.id));if(replacement)composeIds[i]=replacement.id;else $('#composeNotice').textContent='当前条件没有更多可替换题目。'}renderComposePreview();return}
+
  for(const action of ['edit','copy','preview','publish']){const target=e.target.closest('[data-'+action+'-training]');if(!target)continue;const id=target.dataset[action+'Training'];if(action==='edit')editTraining(id);if(action==='copy')editTraining(id,true);if(action==='preview')previewTraining(id);if(action==='publish')publishTraining(id);return}
+
  b=e.target.closest('[data-preview-edit]');if(b){$('#recordDialog').close();editTraining(b.dataset.previewEdit);return}
+
  b=e.target.closest('[data-run-training]');if(b)runTraining(b.dataset.runTraining);
+
 });
+
 if(initialBankSearch)$('#bankSearch').value=initialBankSearch;
+
 window.installLegacyBankAdapters();syncLocalPractice();renderBank();renderTrainings();
+
 const requestedBankId=new URLSearchParams(window.parent.location.search).get('bank_id');
+
 if(requestedBankId&&B[requestedBankId]){document.querySelector('#bankSearch').value=requestedBankId;renderBank();window.parent.location.hash='bank';openBankQuestion(requestedBankId);}
+
+
+
+
 
 
 

@@ -25,7 +25,7 @@
 })();
 /* Logo text bounds alignment end */
 /* Async data adapter beneath the unchanged v1.2.0 DOM/renderers. Classic script scope. */
-(async()=>{const bridge=window.parent.visualBridge,loadedExams=new Set(),bankRows=new Map();let bankPromise,bankScriptLoaded=false,printPromise,serial=0;
+(async()=>{const bridge=window.parent.visualBridge,loadedExams=new Set(),bankRows=new Map();let bankPromise,bankScriptLoaded=false,printPromise,paperMathPromise,serial=0;
  // Original PDFs are encrypted resources; never navigate to their private source paths.
  document.addEventListener('click',event=>{const link=event.target.closest('a[href]');if(!link)return;let href;try{href=decodeURI(link.getAttribute('href').split('#')[0])}catch{return}const paper=D.papers.find(p=>p.local_pdf===href);if(!paper)return;event.preventDefault();event.stopImmediatePropagation();window.parent.postMessage({type:'math-open-paper',id:paper.paper_id||paper.id,download:link.hasAttribute('download')},window.parent.location.origin);},true);
 
@@ -35,9 +35,10 @@
  const decorateRepairRows=()=>{for(const row of document.querySelectorAll('#bankRows tr')){const id=row.querySelector('[data-bank-open]')?.dataset.bankOpen,label=repairLabel(id?bankRows.get(id)||{id}:{});if(label){const state=row.querySelector('.bank-state');if(state){state.textContent=label;state.className='bank-state warning'}const cell=row.querySelector('.bank-id')?.parentElement;if(cell&&!cell.querySelector('.dev-repair-note')){const note=document.createElement('small');note.className='dev-repair-note';note.textContent=repairStatus.question_evidence?.[id]||'DEV状态投影；不可组题';cell.append(note)}}}};
  // The full DEV identifier remains on login/history and the accessible badge label.
  if(bridge.bankStats.reviewSummary){const badge=document.querySelector('.visual-current-version');if(badge)badge.textContent=badge.textContent.split('-')[0]}
- const ensureExam=async id=>{if(loadedExams.has(id))return;const e=await bridge.exam(id);for(const q of e.questions){const i=D.questions.findIndex(x=>x.id===q.id);if(i>=0)D.questions[i]=q}const i=D.paper_analyses.findIndex(a=>a.paper_id===id);if(i>=0)D.paper_analyses[i]=e.analysis;else D.paper_analyses.push(e.analysis);loadedExams.add(id)};
+ const ensureExam=async id=>{if(loadedExams.has(id))return;const e=await bridge.exam(id);if(e.questions.some(q=>q.math_format==='tex'||q.definition_ref))await ensurePaperMath();for(const q of e.questions){const i=D.questions.findIndex(x=>x.id===q.id);if(i>=0)D.questions[i]=q}const i=D.paper_analyses.findIndex(a=>a.paper_id===id);if(i>=0)D.paper_analyses[i]=e.analysis;else D.paper_analyses.push(e.analysis);loadedExams.add(id)};
  const allExams=()=>Promise.all(D.papers.map(p=>ensureExam(p.paper_id)));
  const script=src=>new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=src;s.onload=resolve;s.onerror=()=>reject(Error('模块加载失败'));document.body.append(s)});
+ const ensurePaperMath=()=>typeof window.bankMathText==='function'?Promise.resolve():paperMathPromise??=script('visual-baseline/paper-math.js').catch(error=>{paperMathPromise=null;throw error});
  const busy=async(fn,target=document.querySelector('.view:not(.hidden)'))=>{target?.setAttribute('aria-busy','true');try{return await fn()}finally{target?.removeAttribute('aria-busy')}};
  const oldPaper=renderPaper,oldQuestions=renderQuestions,oldQuestion=openQuestion,oldNode=openNode,oldHistory=openHistoryQuestions,oldCard=card;
  window.card=(...args)=>oldCard(...args).replace(/<img src="([^"]+)"/g,'<img data-visual-src="$1"');
