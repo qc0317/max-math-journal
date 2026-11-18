@@ -1,21 +1,21 @@
 {
-  "built_at": "2026-11-17T17:11:47.453330+00:00",
-  "source_state_sha256": "86b9c3e65f04b38c10e45a9e3a82e2e5af889b20e95d05cae831d2af8c54830b",
-  "state_updated_at": "2026-11-18T01:10:36.087647+08:00",
+  "built_at": "2026-11-18T15:16:22.426464+00:00",
+  "source_state_sha256": "94147928a66ff0b308ba787b0cc8a66d57661fa0ddec4ca67efb9867cefc7ba8",
+  "state_updated_at": "2026-11-18T23:07:07.622664+08:00",
   "deployed": false,
   "files": {
     ".nojekyll": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "app.js": "1321ad5ab9b10f931ebb8bda25fd5acb8fe4b0dbf980d19e4b43c85fdfeb7397",
-    "index.html": "4e94b7719d6a51abc13ca54bc169a7050870e414208f80a1aedb1e67bf38ae3b",
-    "library-facts.json": "c67b22a7c53461a30b41b478f7f403be9f600a128a0f7e08992beff82534f943",
-    "management.css": "66ce2b33652bd205d0f564158fcc9f4ae32a92a6d520d579a7b6f26c8e67cec1",
+    "app.js": "4515c892e63cb6e4dab639d9e4ca46119a379936119171d53b5c4396ed534688",
+    "index.html": "32db4f9277674a7fc5678e080de2692a83ea074d774e0b5f74b7dd72efa5f012",
+    "library-facts.json": "f8a3bf713393e596260d927b90631b0d0156eeb9af77e6bbabab82bb7e8108bc",
+    "management.css": "934b59e2c62c8c2fbe2ce536b422ed511501382ef58861e52bc0d1b592314d97",
     "operations-ui.js": "eda28362bd682f59e0c07edc3b3b89bbd3e991f5d4b0a2304d889be322fe1702",
     "operations.css": "ad3b0d3ac17084f596a165c3bb9ee19b859e81969f432cb587996a0629c406ea",
     "pipeline.css": "64a50d996dd980c44eb9c336d9b2f8a98e9b81cc2b0d6bd21e14b880e46290b7",
-    "state.json": "85022ba36a8f694c34222b4a9fc50e29f1c1fac22bf542a0e74fd117d15e6e06",
+    "state.json": "296dcf751fec8b159a9e82539237bb325dbf3f24b120295f557b95541b7e76e9",
     "styles.css": "98d01c1cd0c054d30c5cf51cd5f93b0529c15867f4a2eeb257d0506e2b2fef39",
-    "version-progress.json": "3b8ee701f689578be44af787585ff66b9bbe4541a0d97738958fbd6fa7306b99",
-    "wiki-ui.js": "e6cbd40ace37f59e8fd3dbec257e08edaf79687a90f07148c19bd94b8237adef",
-    "workflow-ui.js": "7f769913906e8569b21bea1d1eeace71b3448bed54a6f0b67a63a461148e0183"
+    "version-progress.json": "ef78a70715b1ee42cce69f3b5d839efcafec90b113dd99e0196ea202f8050f11",
+    "wiki-ui.js": "69389b4c901a1ac934a9b28c14618f1b37db0c0015e08a6e583394de1a26c7d1",
+    "workflow-ui.js": "ee9e29077825bf5f6a71e0cde6a916ed27fdcfa6d5292fdc9a4ce5aac284e8b9"
   }
 }

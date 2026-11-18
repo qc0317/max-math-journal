@@ -34,7 +34,7 @@ function bankMathText(value){
 
  const input=String(value??'').replace(/\^\\circ/g,'°').replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁼⁽⁾ⁿⁱ]+/g,s=>'^{'+[...s].map(c=>superscripts[c]).join('')+'}');
 
- const wrap=body=>`<math xmlns="http://www.w3.org/1998/Math/MathML" style="font-size:1.15em;vertical-align:middle"><mrow>${body}</mrow></math>`;
+ const wrap=body=>`<span class="bank-math-unit" style="display:inline-block;max-width:100%;vertical-align:middle;overflow-x:auto;overflow-y:hidden;padding:0.15em 0"><math xmlns="http://www.w3.org/1998/Math/MathML" style="font-size:1.15em;vertical-align:middle;max-width:none;overflow:visible"><mrow>${body}</mrow></math></span>`;
 
  function group(s,p){if(s[p]!=='{')return null;let depth=1;for(let j=p+1;j<s.length;j++){if(s[j]==='{')depth++;if(s[j]==='}'&&!--depth)return{body:s.slice(p+1,j),end:j+1};}return null;}
 
