@@ -1,21 +1,22 @@
 {
-  "built_at": "2026-11-18T15:33:04.619022+00:00",
-  "source_state_sha256": "c70ef9788cda33b3cc28596179e43cc193b7dc6bc40ad348370766693c98e127",
-  "state_updated_at": "2026-11-18T23:32:50.779372+08:00",
+  "built_at": "2026-11-18T23:03:40.400480+00:00",
+  "source_state_sha256": "513989a13fe4548ddba8d914f3bfc60dccc046250af8fb86d384279a920b72ec",
+  "state_updated_at": "2026-11-19T07:00:31.637368+08:00",
   "deployed": false,
   "files": {
     ".nojekyll": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "app.js": "4515c892e63cb6e4dab639d9e4ca46119a379936119171d53b5c4396ed534688",
-    "index.html": "068755fad2a55a62f7ab0b0b0604d8ee4b73a2fc9b0eda4b862a539531bc0bec",
-    "library-facts.json": "f8a3bf713393e596260d927b90631b0d0156eeb9af77e6bbabab82bb7e8108bc",
+    "article13-coverage.html": "d801646f7ab7943ce95125c539a42675a65a69119246253d003c68537bc38e3e",
+    "index.html": "5f52829183e0c3f0f0a9467d4d4ed478f30b64867ce269c5f64e277ec51bba2e",
+    "library-facts.json": "3bab1db54d3e8ade2b3a49e16e09624fd190e3309d3239fc0aa82a8d7d6283a0",
     "management.css": "934b59e2c62c8c2fbe2ce536b422ed511501382ef58861e52bc0d1b592314d97",
     "operations-ui.js": "eda28362bd682f59e0c07edc3b3b89bbd3e991f5d4b0a2304d889be322fe1702",
     "operations.css": "ad3b0d3ac17084f596a165c3bb9ee19b859e81969f432cb587996a0629c406ea",
     "pipeline.css": "64a50d996dd980c44eb9c336d9b2f8a98e9b81cc2b0d6bd21e14b880e46290b7",
-    "state.json": "7a262cd6a8cf4fc87846c71a5fd21739cbeb4fd7d39fb5f92e6dc63115f1ef55",
+    "state.json": "06c91fbc038179fcd3d7f44dee041e8a90c67ef403ccbc61667cec1194f26044",
     "styles.css": "98d01c1cd0c054d30c5cf51cd5f93b0529c15867f4a2eeb257d0506e2b2fef39",
-    "version-progress.json": "f5ec43f098625a45e708c550e971b3a7c58759fb1af4a3cbfe95b0e994dfd11a",
-    "wiki-ui.js": "69389b4c901a1ac934a9b28c14618f1b37db0c0015e08a6e583394de1a26c7d1",
+    "version-progress.json": "f8ab00291c6cb244918835d4a73c31a27b85e5de4c773eae3d4e29d6aa0c61d5",
+    "wiki-ui.js": "27dc86c3776a8d70415bac1a4b6c731e6316c937d67ee8c0ae57e3bb0900eee9",
     "workflow-ui.js": "ee9e29077825bf5f6a71e0cde6a916ed27fdcfa6d5292fdc9a4ce5aac284e8b9"
   }
 }

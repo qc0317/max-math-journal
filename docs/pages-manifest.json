@@ -1,6 +1,6 @@
 {
-  "version": "v2.7.1",
-  "release": "2026-11-18-v2.7.1-aaed4a73c436",
+  "version": "v2.7.2",
+  "release": "2026-11-19-v2.7.2-68951e990632",
   "public_files": [
     ".nojekyll",
     "assets/branding/Logo_lite01.png",
@@ -14,6 +14,7 @@
     "loader.js",
     "project/.nojekyll",
     "project/app.js",
+    "project/article13-coverage.html",
     "project/index.html",
     "project/library-facts.json",
     "project/management.css",
