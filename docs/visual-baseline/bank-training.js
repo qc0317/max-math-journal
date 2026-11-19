@@ -136,7 +136,7 @@ function bankSourceInfo(q){
   if(topic&&!/^专题\s*\d+/.test(title))title='专题'+String(topic).padStart(2,'0')+' '+title;
   return {value:s.source_file,label:title,group:ZZPY_SOURCE_SERIES+' · '+(ZZPY_GRADE_LABELS[grade]||'年级待标'),is_zzpy:true,series:ZZPY_SOURCE_SERIES,grade,topic_number:topic};
  }
- const group=/奥数精讲|奥精/.test(s.source_file)?'奥精':/资优生|市北初级中学/.test(s.source_file)?'资优生':/尖子生夺冠|尖子生/.test(s.source_file)?'尖子生':'其他书籍';
+ const group=/交大之星/.test(s.source_file)?'交大之星':/奥数精讲|奥精/.test(s.source_file)?'奥精':/资优生|市北初级中学/.test(s.source_file)?'资优生':/尖子生夺冠|尖子生/.test(s.source_file)?'尖子生':'其他书籍';
  return {value:s.source_file,label:s.source_file,group};
 }
 function bankMatchesSource(q,value){
@@ -154,7 +154,7 @@ function bankSourceOptions(rows){
  for(const x of sourceMap.values())(grouped[x.group]??=[]).push(x);
  const option=x=>'<option value="'+esc(x.value)+'">'+esc(x.label)+'</option>';
  const legacy=names=>names.filter(g=>grouped[g]?.length).map(g=>'<optgroup label="'+g+'">'+grouped[g].sort((a,b)=>a.label.localeCompare(b.label,'zh-CN')).map(option).join('')+'</optgroup>').join('');
- let html='<option value="">全部来源</option>'+legacy(['试卷','资优生','奥精','尖子生']);
+ let html='<option value="">全部来源</option>'+legacy(['试卷','资优生','奥精','交大之星','尖子生']);
  const zzpy=[...sourceMap.values()].filter(x=>x.is_zzpy);
  if(zzpy.length){
   html+='<optgroup label="'+ZZPY_SOURCE_SERIES+'"><option value="@ZZPY:series">整个系列</option></optgroup>';
